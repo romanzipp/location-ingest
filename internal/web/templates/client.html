@@ -1,0 +1,69 @@
+{{define "body"}}
+<h2>{{.Client.Name}}</h2>
+
+<h3>destinations</h3>
+
+{{if not .Client.Destinations}}
+    <p class="muted">no relays observed yet.</p>
+{{else}}
+    <table>
+        <thead>
+        <tr>
+            <th>destination</th>
+            <th>last attempt</th>
+            <th>status</th>
+            <th>error</th>
+        </tr>
+        </thead>
+        <tbody>
+        {{range .Client.Destinations}}
+            <tr>
+                <td>{{.Name}}</td>
+                <td class="muted">{{formatTime .LastTime}}</td>
+                <td>
+                    {{if statusOK .LastStatus}}
+                        <span class="pill ok">{{.LastStatus}}</span>
+                    {{else if .LastStatus}}
+                        <span class="pill err">{{.LastStatus}}</span>
+                    {{else}}
+                        <span class="pill">—</span>
+                    {{end}}
+                </td>
+                <td class="muted">{{.LastError}}</td>
+            </tr>
+        {{end}}
+        </tbody>
+    </table>
+{{end}}
+
+<h3>recent fixes</h3>
+
+{{if not .Client.Fixes}}
+    <p class="muted">no fixes yet.</p>
+{{else}}
+    <table>
+        <thead>
+        <tr>
+            <th>time</th>
+            <th>source</th>
+            <th class="num">lat</th>
+            <th class="num">lon</th>
+            <th class="num">acc</th>
+            <th class="num">batt</th>
+        </tr>
+        </thead>
+        <tbody>
+        {{range reverse .Client.Fixes}}
+            <tr>
+                <td class="muted">{{formatTime .Time}}</td>
+                <td>{{.Source}}</td>
+                <td class="num">{{printf "%.5f" .Lat}}</td>
+                <td class="num">{{printf "%.5f" .Lon}}</td>
+                <td class="num">{{printf "%.0f" .Accuracy}}</td>
+                <td class="num">{{printf "%.0f" .Battery}}</td>
+            </tr>
+        {{end}}
+        </tbody>
+    </table>
+{{end}}
+{{end}}

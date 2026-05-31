@@ -1,0 +1,20 @@
+{{define "layout"}}<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{.Title}} — location-ingest</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<main>
+    <h1><a href="/">location-ingest</a></h1>
+
+    {{template "body" .}}
+
+    <footer>
+        <span class="muted">version {{.Version}}</span>
+    </footer>
+</main>
+</body>
+</html>{{end}}

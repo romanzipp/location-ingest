@@ -8,6 +8,7 @@ import (
 	"codeberg.org/romanzipp/location-ingest/internal/pipeline"
 	"codeberg.org/romanzipp/location-ingest/internal/relay"
 	"codeberg.org/romanzipp/location-ingest/internal/store"
+	"codeberg.org/romanzipp/location-ingest/internal/web"
 )
 
 type Server struct {
@@ -66,4 +67,16 @@ func (s *Server) registerRoutes() {
 			s.logger.Info("route registered", "client", cl.Name, "kind", src.Kind, "path", src.Path)
 		}
 	}
+
+	if !s.cfg.Web.Enabled {
+		return
+	}
+
+	wh, err := web.New(s.ring)
+	if err != nil {
+		s.logger.Error("web init failed, continuing without UI", "err", err)
+		return
+	}
+
+	wh.Register(s.mux)
 }
