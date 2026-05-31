@@ -1,0 +1,9 @@
+/bin/
+/dist/
+*.test
+*.out
+.idea/
+.vscode/
+.DS_Store
+config.yaml
+config.local.yaml

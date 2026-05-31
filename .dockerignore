@@ -1,0 +1,12 @@
+.git
+.github
+.woodpecker
+bin
+dist
+deploy
+*.md
+.idea
+.vscode
+.DS_Store
+config.yaml
+config.local.yaml
