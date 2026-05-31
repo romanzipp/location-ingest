@@ -1,0 +1,37 @@
+server:
+  listen: ":8080"
+
+web:
+  enabled: true
+  max_fixes_per_client: 500
+
+clients:
+  - name: phone-roman
+    sources:
+      - kind: owntracks
+        path: /ot/phone-roman
+        primary: owntracks-recorder
+
+      - kind: traccar
+        path: /tr/phone-roman
+        primary: traccar-server
+
+    destinations:
+      - owntracks-recorder
+      - traccar-server
+      - kuma
+
+destinations:
+  - name: owntracks-recorder
+    kind: owntracks_recorder
+    url: http://127.0.0.1:9001/pub
+
+  - name: traccar-server
+    kind: traccar_osmand
+    url: http://127.0.0.1:9001
+
+  - name: kuma
+    kind: heartbeat
+    method: GET
+    url: http://127.0.0.1:9001/push?status=up&msg=loc&ping={{.Accuracy}}
+    min_interval: 60s
