@@ -1,0 +1,6 @@
+apiVersion: v2
+name: location-ingest-chart
+description: location-ingest relay for OwnTracks and Traccar
+type: application
+version: 0.0.0
+appVersion: "0.0.0"

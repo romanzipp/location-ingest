@@ -1,0 +1,76 @@
+image:
+  repository: registry.apex.romanzipp.cloud/location-ingest-image
+  pullPolicy: IfNotPresent
+  tag: ""
+
+fullnameOverride: location-ingest
+
+imagePullSecrets: []
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts: []
+  tls: []
+  redirects: []
+
+resources:
+  requests:
+    cpu: 25m
+    memory: 64Mi
+  limits:
+    memory: 128Mi
+
+# location-ingest reads a single YAML config from /etc/location-ingest/config.yaml.
+# Supply the full document here; it is rendered into a ConfigMap and mounted.
+# Example:
+#   config:
+#     server:
+#       listen: ":8080"
+#     web:
+#       enabled: true
+#       max_fixes_per_client: 500
+#     clients:
+#       - name: phone
+#         sources:
+#           - kind: owntracks
+#             path: /ot/phone
+#             primary: recorder
+#         destinations: [recorder]
+#     destinations:
+#       - name: recorder
+#         kind: owntracks_recorder
+#         url: https://recorder.example.com/pub
+config: {}
+
+probes:
+  liveness:
+    httpGet:
+      path: /healthz
+      port: http
+    initialDelaySeconds: 5
+    periodSeconds: 10
+  readiness:
+    httpGet:
+      path: /healthz
+      port: http
+    initialDelaySeconds: 2
+    periodSeconds: 5
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+  runAsGroup: 65532
+  fsGroup: 65532
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: [ ALL ]

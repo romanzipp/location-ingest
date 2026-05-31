@@ -1,0 +1,33 @@
+{{- range $i, $r := .Values.ingress.redirects -}}
+{{- $code := default 301 $r.code -}}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "location-ingest.fullname" $ }}-redirect-{{ $i }}
+  labels:
+    {{- include "location-ingest.labels" $ | nindent 4 }}
+  annotations:
+    {{- with $.Values.ingress.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+    haproxy.org/request-redirect: "https://{{ $r.to }}"
+    haproxy.org/request-redirect-code: {{ $code | quote }}
+spec:
+  ingressClassName: {{ $.Values.ingress.className }}
+  tls:
+    - secretName: {{ include "location-ingest.fullname" $ }}-redirect-{{ $i }}-tls
+      hosts:
+        - {{ $r.from | quote }}
+  rules:
+    - host: {{ $r.from | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "location-ingest.fullname" $ }}
+                port:
+                  name: http
+{{ end }}
