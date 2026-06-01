@@ -42,16 +42,15 @@ func New(cfg *config.Config, logger *slog.Logger) (*Server, error) {
 
 	s.registerRoutes()
 
-	s.handler = accessLog(logger, s.mux)
 	if httpLogEnabled() {
-		logger.Info("http request logging enabled", "env", httpLogEnv)
+		logger.Info("ingress request logging enabled", "env", httpLogEnv)
 	}
 
 	return s, nil
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	s.handler.ServeHTTP(w, r)
+	s.mux.ServeHTTP(w, r)
 }
 
 func (s *Server) Close() {

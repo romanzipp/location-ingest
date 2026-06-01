@@ -4,8 +4,10 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"sort"
 	"strings"
-	"time"
+
+	"codeberg.org/romanzipp/location-ingest/internal/pipeline"
 )
 
 const httpLogEnv = "HTTP_LOG"
@@ -21,56 +23,32 @@ func httpLogEnabled() bool {
 	return true
 }
 
-type statusRecorder struct {
-	http.ResponseWriter
-
-	status int
-	bytes  int
-}
-
-func (s *statusRecorder) WriteHeader(code int) {
-	s.status = code
-	s.ResponseWriter.WriteHeader(code)
-}
-
-func (s *statusRecorder) Write(b []byte) (int, error) {
-	if s.status == 0 {
-		s.status = http.StatusOK
-	}
-
-	n, err := s.ResponseWriter.Write(b)
-	s.bytes += n
-
-	return n, err
-}
-
-func accessLog(logger *slog.Logger, next http.Handler) http.Handler {
+func logIngress(logger *slog.Logger, r *http.Request, raw *pipeline.RawRequest, rc routeContext) {
 	if !httpLogEnabled() {
-		return next
+		return
 	}
 
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
+	attrs := []any{
+		"client", rc.client,
+		"kind", rc.kind,
+		"method", raw.Method,
+		"path", raw.Path,
+		"remote", clientAddr(r),
+	}
 
-		rec := &statusRecorder{ResponseWriter: w}
-		next.ServeHTTP(rec, r)
+	if len(raw.Query) > 0 {
+		attrs = append(attrs, "query", flattenValues(raw.Query))
+	}
 
-		status := rec.status
-		if status == 0 {
-			status = http.StatusOK
-		}
+	if len(raw.Header) > 0 {
+		attrs = append(attrs, "headers", flattenHeader(raw.Header))
+	}
 
-		logger.Info("http",
-			"method", r.Method,
-			"path", r.URL.Path,
-			"query", r.URL.RawQuery,
-			"status", status,
-			"bytes", rec.bytes,
-			"duration_ms", time.Since(start).Milliseconds(),
-			"remote", clientAddr(r),
-			"user_agent", r.UserAgent(),
-		)
-	})
+	if len(raw.Body) > 0 {
+		attrs = append(attrs, "body", string(raw.Body), "body_bytes", len(raw.Body))
+	}
+
+	logger.Info("ingress request", attrs...)
 }
 
 func clientAddr(r *http.Request) string {
@@ -86,4 +64,29 @@ func clientAddr(r *http.Request) string {
 	}
 
 	return r.RemoteAddr
+}
+
+func flattenValues(v map[string][]string) map[string]string {
+	out := make(map[string]string, len(v))
+
+	for k, vs := range v {
+		out[k] = strings.Join(vs, ",")
+	}
+
+	return out
+}
+
+func flattenHeader(h http.Header) map[string]string {
+	keys := make([]string, 0, len(h))
+	for k := range h {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	out := make(map[string]string, len(keys))
+	for _, k := range keys {
+		out[k] = strings.Join(h[k], ",")
+	}
+
+	return out
 }

@@ -38,6 +38,8 @@ func (s *Server) handleIngress(w http.ResponseWriter, r *http.Request, rc routeC
 		return
 	}
 
+	logIngress(s.logger, r, raw, rc)
+
 	fix := s.parseFix(rc, raw)
 	if fix != nil {
 		s.ring.AddFix(*fix)
