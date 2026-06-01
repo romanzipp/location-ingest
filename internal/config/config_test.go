@@ -21,6 +21,7 @@ func writeTempConfig(t *testing.T, body string) string {
 
 func TestLoadExample(t *testing.T) {
 	t.Setenv("OWNTRACKS_PASSWORD", "dummy")
+	t.Setenv("DAWARICH_API_KEY", "dummy")
 
 	cfg, err := Load("../../config.example.yaml")
 	if err != nil {

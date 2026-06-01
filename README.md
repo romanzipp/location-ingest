@@ -11,6 +11,7 @@ Deploy a unified location ingesting service that relays location data sent from 
 
 - [Owntracks Recorder](https://github.com/owntracks/recorder)
 - [Traccar Server](https://www.traccar.org/server/)
+- [Dawarich](https://dawarich.app/)
 - Any heartbeat or push monitor that accepts an HTTP request, like Uptime Kuma or Kuvasz
 
 ## How it works
@@ -71,6 +72,9 @@ clients:
       traccar-server:
         device_id: "12345678"
 
+      dawarich:
+        api_key: ${DAWARICH_API_KEY}
+
       kuma:
 
 destinations:
@@ -81,6 +85,10 @@ destinations:
   - name: traccar-server
     kind: traccar_osmand
     url: https://traccar.example.com
+
+  - name: dawarich
+    kind: dawarich
+    url: https://dawarich.example.com/api/v1/owntracks/points
 
   - name: kuma
     kind: heartbeat
@@ -110,6 +118,15 @@ Sent to a Traccar server speaking the OsmAnd protocol on port 5055.
 * `device_id` (required), the numeric device id registered on your Traccar server, forwarded as `?id=`
 
 The device id is required even if your client only uses the Owntracks source, because the Owntracks payload contains no Traccar id.
+
+#### dawarich
+
+Sent to a [Dawarich](https://dawarich.app/) instance via its OwnTracks-compatible endpoint. The URL must point at `/api/v1/owntracks/points` on your Dawarich host.
+
+* `api_key` (required), the 32-character API key from your Dawarich account settings, sent as `?api_key=`
+* `tid` (optional), a short identifier shown next to points in the Dawarich UI. Defaults to whatever the source app provided.
+
+Works for both OwnTracks and Traccar sources. The parsed location is serialized as an OwnTracks payload before sending.
 
 #### heartbeat
 

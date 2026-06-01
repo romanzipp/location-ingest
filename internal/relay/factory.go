@@ -47,6 +47,9 @@ func buildOne(d *config.Destination, cd *config.ClientDestination) (pipeline.Rel
 	case config.KindTraccarOsmand:
 		return NewTraccarOsmand(d, cd)
 
+	case config.KindDawarich:
+		return NewDawarich(d, cd)
+
 	case config.KindHeartbeat:
 		return NewHeartbeat(d)
 	}

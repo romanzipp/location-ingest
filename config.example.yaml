@@ -37,6 +37,9 @@ clients:
       traccar-server:
         device_id: "12345678"
 
+      dawarich:
+        api_key: ${DAWARICH_API_KEY}
+
       kuma:
 
 destinations:
@@ -58,6 +61,10 @@ destinations:
   - name: traccar-server
     kind: traccar_osmand
     url: https://traccar.example.com
+
+  - name: dawarich
+    kind: dawarich
+    url: https://dawarich.example.com/api/v1/owntracks/points
 
   - name: kuma
     kind: heartbeat

@@ -39,6 +39,9 @@ type ClientDestination struct {
 	BasicAuth *BasicAuth `yaml:"basic_auth,omitempty"`
 
 	DeviceID string `yaml:"device_id,omitempty"`
+
+	APIKey string `yaml:"api_key,omitempty"`
+	Tid    string `yaml:"tid,omitempty"`
 }
 
 type BasicAuth struct {
@@ -69,6 +72,7 @@ const (
 	KindTraccar           = "traccar"
 	KindOwnTracksRecorder = "owntracks_recorder"
 	KindTraccarOsmand     = "traccar_osmand"
+	KindDawarich          = "dawarich"
 	KindHeartbeat         = "heartbeat"
 )
 
@@ -166,7 +170,7 @@ func (c *Config) validateDestinations() (map[string]*Destination, error) {
 		}
 
 		switch d.Kind {
-		case KindOwnTracksRecorder, KindTraccarOsmand, KindHeartbeat:
+		case KindOwnTracksRecorder, KindTraccarOsmand, KindDawarich, KindHeartbeat:
 		default:
 			return nil, fmt.Errorf("destination %q: unknown kind %q", d.Name, d.Kind)
 		}
@@ -248,6 +252,11 @@ func validateClientDestination(client string, d *Destination, cd *ClientDestinat
 	case KindOwnTracksRecorder:
 		if cd == nil || cd.Username == "" || cd.Device == "" {
 			return fmt.Errorf("client %q destination %q (owntracks_recorder): username and device are required so non-OwnTracks sources can be relayed", client, d.Name)
+		}
+
+	case KindDawarich:
+		if cd == nil || cd.APIKey == "" {
+			return fmt.Errorf("client %q destination %q (dawarich): api_key is required", client, d.Name)
 		}
 	}
 
