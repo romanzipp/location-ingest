@@ -106,7 +106,7 @@ func (s *Server) parseLocation(rc routeContext, raw *pipeline.RawRequest) *model
 		return loc
 
 	case config.KindTraccar:
-		loc, err := traccar.ParseLocation(rc.client, raw.Query)
+		loc, err := traccar.ParseLocation(rc.client, raw)
 		if err != nil {
 			if !traccar.IsSkip(err) {
 				s.logger.Warn("traccar parse failed", "client", rc.client, "err", err)

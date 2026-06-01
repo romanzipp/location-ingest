@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 
 	"codeberg.org/romanzipp/location-ingest/internal/config"
 	"codeberg.org/romanzipp/location-ingest/internal/model"
@@ -37,38 +38,49 @@ func NewTraccarOsmand(d *config.Destination, cd *config.ClientDestination) *Trac
 
 func (r *TraccarOsmand) Name() string { return r.name }
 
-func (r *TraccarOsmand) Send(ctx context.Context, raw *pipeline.RawRequest, _ *model.Location) (*pipeline.Response, error) {
+func (r *TraccarOsmand) RequiresLocation() bool { return true }
+
+func (r *TraccarOsmand) Send(ctx context.Context, _ *pipeline.RawRequest, loc *model.Location) (*pipeline.Response, error) {
 	target, err := url.Parse(r.url)
 	if err != nil {
 		return nil, fmt.Errorf("parse url: %w", err)
 	}
 
 	q := target.Query()
-	for k, vs := range raw.Query {
-		for _, v := range vs {
-			q.Set(k, v)
-		}
+
+	id := loc.DeviceID
+	if r.deviceID != "" {
+		id = r.deviceID
+	}
+	if id != "" {
+		q.Set("id", id)
 	}
 
-	if r.deviceID != "" {
-		q.Set("id", r.deviceID)
-		q.Del("deviceid")
+	q.Set("lat", formatFloat(loc.Lat))
+	q.Set("lon", formatFloat(loc.Lon))
+	q.Set("timestamp", strconv.FormatInt(loc.Time.UTC().Unix(), 10))
+
+	if loc.Accuracy != 0 {
+		q.Set("accuracy", formatFloat(loc.Accuracy))
+	}
+	if loc.Altitude != 0 {
+		q.Set("altitude", formatFloat(loc.Altitude))
+	}
+	if loc.Speed != 0 {
+		q.Set("speed", formatFloat(loc.Speed))
+	}
+	if loc.Bearing != 0 {
+		q.Set("bearing", formatFloat(loc.Bearing))
+	}
+	if loc.Battery != 0 {
+		q.Set("batt", formatFloat(loc.Battery))
 	}
 
 	target.RawQuery = q.Encode()
 
-	method := raw.Method
-	if method == "" {
-		method = http.MethodPost
-	}
-
-	req, err := http.NewRequestWithContext(ctx, method, target.String(), raw.BodyReader())
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, target.String(), nil)
 	if err != nil {
 		return nil, fmt.Errorf("build request: %w", err)
-	}
-
-	if ct := raw.Header.Get("Content-Type"); ct != "" {
-		req.Header.Set("Content-Type", ct)
 	}
 
 	resp, err := r.client.Do(req)
@@ -88,4 +100,8 @@ func (r *TraccarOsmand) Send(ctx context.Context, raw *pipeline.RawRequest, _ *m
 		Body:        body,
 		ContentType: resp.Header.Get("Content-Type"),
 	}, nil
+}
+
+func formatFloat(v float64) string {
+	return strconv.FormatFloat(v, 'f', -1, 64)
 }
