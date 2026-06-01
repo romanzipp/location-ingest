@@ -28,7 +28,7 @@ func NewOwnTracksRecorder(d *config.Destination) *OwnTracksRecorder {
 
 func (r *OwnTracksRecorder) Name() string { return r.name }
 
-func (r *OwnTracksRecorder) Send(ctx context.Context, raw *pipeline.RawRequest, _ *model.Fix) (*pipeline.Response, error) {
+func (r *OwnTracksRecorder) Send(ctx context.Context, raw *pipeline.RawRequest, _ *model.Location) (*pipeline.Response, error) {
 	method := raw.Method
 	if method == "" {
 		method = http.MethodPost

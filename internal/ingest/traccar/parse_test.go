@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestParseFix(t *testing.T) {
+func TestParseLocation(t *testing.T) {
 	q := url.Values{
 		"id":        {"phone-1"},
 		"lat":       {"52.5"},
@@ -14,22 +14,22 @@ func TestParseFix(t *testing.T) {
 		"speed":     {"3.2"},
 	}
 
-	fix, err := ParseFix("phone", q)
+	loc, err := ParseLocation("phone", q)
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
 
-	if fix.Lat != 52.5 || fix.Lon != 13.4 {
+	if loc.Lat != 52.5 || loc.Lon != 13.4 {
 		t.Fatalf("bad coords")
 	}
 
-	if fix.DeviceID != "phone-1" {
-		t.Fatalf("device id: %q", fix.DeviceID)
+	if loc.DeviceID != "phone-1" {
+		t.Fatalf("device id: %q", loc.DeviceID)
 	}
 }
 
-func TestParseFixSkipsMissing(t *testing.T) {
-	if _, err := ParseFix("phone", url.Values{}); !IsSkip(err) {
+func TestParseLocationSkipsMissing(t *testing.T) {
+	if _, err := ParseLocation("phone", url.Values{}); !IsSkip(err) {
 		t.Fatalf("expected skip, got %v", err)
 	}
 }

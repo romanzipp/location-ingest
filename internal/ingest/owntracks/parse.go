@@ -26,7 +26,7 @@ type payload struct {
 
 var errSkip = errors.New("owntracks: not a location payload")
 
-func ParseFix(client string, body []byte) (*model.Fix, error) {
+func ParseLocation(client string, body []byte) (*model.Location, error) {
 	if len(body) == 0 {
 		return nil, errSkip
 	}
@@ -45,7 +45,7 @@ func ParseFix(client string, body []byte) (*model.Fix, error) {
 		ts = time.Now().UTC()
 	}
 
-	return &model.Fix{
+	return &model.Location{
 		Client:   client,
 		Source:   model.SourceOwnTracks,
 		Time:     ts,

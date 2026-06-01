@@ -79,14 +79,14 @@ func NewHeartbeat(d *config.Destination) (*Heartbeat, error) {
 
 func (h *Heartbeat) Name() string { return h.name }
 
-func (h *Heartbeat) RequiresFix() bool { return true }
+func (h *Heartbeat) RequiresLocation() bool { return true }
 
-func (h *Heartbeat) Send(ctx context.Context, _ *pipeline.RawRequest, fix *model.Fix) (*pipeline.Response, error) {
+func (h *Heartbeat) Send(ctx context.Context, _ *pipeline.RawRequest, loc *model.Location) (*pipeline.Response, error) {
 	if !h.allow() {
 		return nil, ErrRateLimited
 	}
 
-	hc := buildContext(fix)
+	hc := buildContext(loc)
 
 	var urlBuf bytes.Buffer
 	if err := h.urlTmpl.Execute(&urlBuf, hc); err != nil {
@@ -143,23 +143,23 @@ func (h *Heartbeat) allow() bool {
 	return true
 }
 
-func buildContext(fix *model.Fix) heartbeatContext {
-	if fix == nil {
+func buildContext(loc *model.Location) heartbeatContext {
+	if loc == nil {
 		return heartbeatContext{Time: time.Now()}
 	}
 
 	return heartbeatContext{
-		Client:   fix.Client,
-		Source:   string(fix.Source),
-		Time:     fix.Time,
-		Lat:      fix.Lat,
-		Lon:      fix.Lon,
-		Accuracy: fix.Accuracy,
-		Altitude: fix.Altitude,
-		Speed:    fix.Speed,
-		Bearing:  fix.Bearing,
-		Battery:  fix.Battery,
-		Trigger:  fix.Trigger,
-		DeviceID: fix.DeviceID,
+		Client:   loc.Client,
+		Source:   string(loc.Source),
+		Time:     loc.Time,
+		Lat:      loc.Lat,
+		Lon:      loc.Lon,
+		Accuracy: loc.Accuracy,
+		Altitude: loc.Altitude,
+		Speed:    loc.Speed,
+		Bearing:  loc.Bearing,
+		Battery:  loc.Battery,
+		Trigger:  loc.Trigger,
+		DeviceID: loc.DeviceID,
 	}
 }

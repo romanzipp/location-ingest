@@ -28,7 +28,7 @@ func NewTraccarOsmand(d *config.Destination) *TraccarOsmand {
 
 func (r *TraccarOsmand) Name() string { return r.name }
 
-func (r *TraccarOsmand) Send(ctx context.Context, raw *pipeline.RawRequest, _ *model.Fix) (*pipeline.Response, error) {
+func (r *TraccarOsmand) Send(ctx context.Context, raw *pipeline.RawRequest, _ *model.Location) (*pipeline.Response, error) {
 	method := raw.Method
 	if method == "" {
 		method = http.MethodPost

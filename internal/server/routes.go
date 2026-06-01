@@ -41,7 +41,7 @@ func (s *Server) handleIngress(w http.ResponseWriter, r *http.Request, rc routeC
 
 	logIngress(s.logger, r, raw, rc)
 
-	fix := s.parseFix(rc, raw)
+	loc := s.parseLocation(rc, raw)
 
 	req := &store.IngressRequest{
 		Client: rc.client,
@@ -51,25 +51,25 @@ func (s *Server) handleIngress(w http.ResponseWriter, r *http.Request, rc routeC
 		Query:  raw.Query,
 		Header: raw.Header,
 		Body:   raw.Body,
-		HasFix: fix != nil,
+		HasLocation: loc != nil,
 	}
 
 	s.ring.Add(req)
 
 	if rc.primary == "" {
-		s.dispatcher.DispatchFanout(req, rc.destinations, "", raw, fix)
+		s.dispatcher.DispatchFanout(req, rc.destinations, "", raw, loc)
 		writeDefaultResponse(w, rc.kind)
 		return
 	}
 
-	resp, err := s.dispatcher.DispatchPrimary(r.Context(), req, rc.primary, raw, fix)
+	resp, err := s.dispatcher.DispatchPrimary(r.Context(), req, rc.primary, raw, loc)
 	if err != nil {
 		s.logger.Warn("primary dispatch failed", "client", rc.client, "destination", rc.primary, "err", err)
 		http.Error(w, "upstream error", http.StatusBadGateway)
 		return
 	}
 
-	s.dispatcher.DispatchFanout(req, rc.destinations, rc.primary, raw, fix)
+	s.dispatcher.DispatchFanout(req, rc.destinations, rc.primary, raw, loc)
 
 	if resp == nil {
 		writeDefaultResponse(w, rc.kind)
@@ -79,27 +79,27 @@ func (s *Server) handleIngress(w http.ResponseWriter, r *http.Request, rc routeC
 	proxyResponse(w, resp, rc.kind)
 }
 
-func (s *Server) parseFix(rc routeContext, raw *pipeline.RawRequest) *model.Fix {
+func (s *Server) parseLocation(rc routeContext, raw *pipeline.RawRequest) *model.Location {
 	switch rc.kind {
 	case config.KindOwnTracks:
-		fix, err := owntracks.ParseFix(rc.client, raw.Body)
+		loc, err := owntracks.ParseLocation(rc.client, raw.Body)
 		if err != nil {
 			if !owntracks.IsSkip(err) {
 				s.logger.Warn("owntracks parse failed", "client", rc.client, "err", err)
 			}
 			return nil
 		}
-		return fix
+		return loc
 
 	case config.KindTraccar:
-		fix, err := traccar.ParseFix(rc.client, raw.Query)
+		loc, err := traccar.ParseLocation(rc.client, raw.Query)
 		if err != nil {
 			if !traccar.IsSkip(err) {
 				s.logger.Warn("traccar parse failed", "client", rc.client, "err", err)
 			}
 			return nil
 		}
-		return fix
+		return loc
 	}
 
 	return nil

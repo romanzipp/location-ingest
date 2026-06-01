@@ -15,7 +15,7 @@
                 <span class="pill">{{.Source}}</span>
                 <span class="pill">{{.Method}}</span>
                 <code>{{.Path}}</code>
-                {{if .HasFix}}<span class="pill ok">fix</span>{{end}}
+                {{if .HasLocation}}<span class="pill ok">location</span>{{end}}
 
                 <span class="dests">
                 {{range .Destinations}}

@@ -12,7 +12,7 @@ const (
 	SourceTraccar   Source = "traccar"
 )
 
-type Fix struct {
+type Location struct {
 	Client   string `json:"client"`
 	Source   Source `json:"source"`
 	Time     time.Time `json:"time"`

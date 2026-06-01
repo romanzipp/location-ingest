@@ -35,7 +35,7 @@ type IngressRequest struct {
 	Header map[string][]string
 	Body   []byte
 
-	HasFix bool
+	HasLocation bool
 
 	mu           sync.Mutex
 	destinations []DestinationResult

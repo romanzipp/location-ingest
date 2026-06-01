@@ -17,14 +17,14 @@ type Response struct {
 
 type Relay interface {
 	Name() string
-	Send(ctx context.Context, raw *RawRequest, fix *model.Fix) (*Response, error)
+	Send(ctx context.Context, raw *RawRequest, loc *model.Location) (*Response, error)
 }
 
-type FixRequirer interface {
-	RequiresFix() bool
+type LocationRequirer interface {
+	RequiresLocation() bool
 }
 
-func requiresFix(r Relay) bool {
-	fr, ok := r.(FixRequirer)
-	return ok && fr.RequiresFix()
+func requiresLocation(r Relay) bool {
+	fr, ok := r.(LocationRequirer)
+	return ok && fr.RequiresLocation()
 }

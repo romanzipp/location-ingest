@@ -42,7 +42,7 @@ type requestView struct {
 	Method string
 	Path   string
 
-	HasFix bool
+	HasLocation bool
 
 	Query   []kv
 	Headers []kv
@@ -162,7 +162,7 @@ func buildRequestViews(reqs []*store.IngressRequest) []requestView {
 			Source:       req.Source,
 			Method:       req.Method,
 			Path:         req.Path,
-			HasFix:       req.HasFix,
+			HasLocation:       req.HasLocation,
 			Query:        sortedKV(req.Query),
 			Headers:      sortedKV(req.Header),
 			Body:         string(req.Body),

@@ -12,7 +12,7 @@ import (
 
 var errSkip = errors.New("traccar: missing lat/lon")
 
-func ParseFix(client string, q url.Values) (*model.Fix, error) {
+func ParseLocation(client string, q url.Values) (*model.Location, error) {
 	if len(q) == 0 {
 		return nil, errSkip
 	}
@@ -39,7 +39,7 @@ func ParseFix(client string, q url.Values) (*model.Fix, error) {
 	acc, _ := parseFloat(q.Get("accuracy"))
 	batt, _ := parseFloat(q.Get("batt"))
 
-	return &model.Fix{
+	return &model.Location{
 		Client:   client,
 		Source:   model.SourceTraccar,
 		Time:     ts,

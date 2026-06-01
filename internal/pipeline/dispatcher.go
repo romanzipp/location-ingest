@@ -37,7 +37,7 @@ type job struct {
 	req *store.IngressRequest
 
 	raw *RawRequest
-	fix *model.Fix
+	loc *model.Location
 }
 
 func NewDispatcher(logger *slog.Logger, relays map[string]Relay) *Dispatcher {
@@ -64,15 +64,15 @@ func (d *Dispatcher) run(w *worker) {
 
 	for j := range w.ch {
 		ctx, cancel := context.WithTimeout(context.Background(), fanoutTimeout)
-		d.send(ctx, w.relay, j.req, j.raw, j.fix)
+		d.send(ctx, w.relay, j.req, j.raw, j.loc)
 		cancel()
 	}
 }
 
-func (d *Dispatcher) send(ctx context.Context, r Relay, req *store.IngressRequest, raw *RawRequest, fix *model.Fix) *Response {
+func (d *Dispatcher) send(ctx context.Context, r Relay, req *store.IngressRequest, raw *RawRequest, loc *model.Location) *Response {
 	start := time.Now()
 
-	resp, err := r.Send(ctx, raw, fix)
+	resp, err := r.Send(ctx, raw, loc)
 
 	result := store.DestinationResult{
 		Name:     r.Name(),
@@ -94,21 +94,21 @@ func (d *Dispatcher) send(ctx context.Context, r Relay, req *store.IngressReques
 	return resp
 }
 
-func (d *Dispatcher) DispatchPrimary(ctx context.Context, req *store.IngressRequest, primary string, raw *RawRequest, fix *model.Fix) (*Response, error) {
+func (d *Dispatcher) DispatchPrimary(ctx context.Context, req *store.IngressRequest, primary string, raw *RawRequest, loc *model.Location) (*Response, error) {
 	r, ok := d.relays[primary]
 	if !ok {
 		return nil, errors.New("primary relay not found: " + primary)
 	}
 
-	if fix == nil && requiresFix(r) {
-		req.AddResult(store.DestinationResult{Name: primary, Skipped: "requires location fix"})
+	if loc == nil && requiresLocation(r) {
+		req.AddResult(store.DestinationResult{Name: primary, Skipped: "requires location"})
 		return nil, nil
 	}
 
-	return d.send(ctx, r, req, raw, fix), nil
+	return d.send(ctx, r, req, raw, loc), nil
 }
 
-func (d *Dispatcher) DispatchFanout(req *store.IngressRequest, destinations []string, primary string, raw *RawRequest, fix *model.Fix) {
+func (d *Dispatcher) DispatchFanout(req *store.IngressRequest, destinations []string, primary string, raw *RawRequest, loc *model.Location) {
 	for _, name := range destinations {
 		if name == primary {
 			continue
@@ -119,13 +119,13 @@ func (d *Dispatcher) DispatchFanout(req *store.IngressRequest, destinations []st
 			continue
 		}
 
-		if fix == nil && requiresFix(w.relay) {
-			req.AddResult(store.DestinationResult{Name: name, Skipped: "requires location fix"})
+		if loc == nil && requiresLocation(w.relay) {
+			req.AddResult(store.DestinationResult{Name: name, Skipped: "requires location"})
 			continue
 		}
 
 		select {
-		case w.ch <- job{req: req, raw: raw, fix: fix}:
+		case w.ch <- job{req: req, raw: raw, loc: loc}:
 		default:
 			d.logger.Warn("destination queue full, dropping", "client", req.Client, "destination", name)
 			req.AddResult(store.DestinationResult{Name: name, Skipped: "queue full"})
