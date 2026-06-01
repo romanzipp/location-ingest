@@ -103,7 +103,7 @@ destinations:
 
 Each client lists the destinations it should fan out to as a map keyed by destination name. The value carries identity and credentials sent to that destination. Use an empty value (`kuma:` or `kuma: {}`) when the destination needs no overrides.
 
-#### owntracks_recorder
+#### `owntracks_recorder`
 
 Sent to an Owntracks Recorder.
 
@@ -113,7 +113,7 @@ Sent to an Owntracks Recorder.
 
 Username and device are required even if your client only uses the Traccar source, because cross-protocol fan-out still needs an identity to send.
 
-#### traccar_osmand
+#### `traccar_osmand`
 
 Sent to a Traccar server speaking the OsmAnd protocol on port 5055.
 
@@ -121,7 +121,7 @@ Sent to a Traccar server speaking the OsmAnd protocol on port 5055.
 
 The device id is required even if your client only uses the Owntracks source, because the Owntracks payload contains no Traccar id.
 
-#### dawarich
+#### `dawarich`
 
 Sent to a [Dawarich](https://dawarich.app/) instance via its OwnTracks-compatible endpoint. The URL must point at `/api/v1/owntracks/points` on your Dawarich host.
 
@@ -130,7 +130,7 @@ Sent to a [Dawarich](https://dawarich.app/) instance via its OwnTracks-compatibl
 
 Works for both OwnTracks and Traccar sources. The parsed location is serialized as an OwnTracks payload before sending.
 
-#### heartbeat
+#### `heartbeat`
 
 Sent to a generic push endpoint. Takes no per-client fields. Only fires when an actual location was parsed from the inbound request.
 
