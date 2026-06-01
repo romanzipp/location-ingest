@@ -19,3 +19,12 @@ type Relay interface {
 	Name() string
 	Send(ctx context.Context, raw *RawRequest, fix *model.Fix) (*Response, error)
 }
+
+type FixRequirer interface {
+	RequiresFix() bool
+}
+
+func requiresFix(r Relay) bool {
+	fr, ok := r.(FixRequirer)
+	return ok && fr.RequiresFix()
+}

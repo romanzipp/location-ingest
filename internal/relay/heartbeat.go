@@ -79,6 +79,8 @@ func NewHeartbeat(d *config.Destination) (*Heartbeat, error) {
 
 func (h *Heartbeat) Name() string { return h.name }
 
+func (h *Heartbeat) RequiresFix() bool { return true }
+
 func (h *Heartbeat) Send(ctx context.Context, _ *pipeline.RawRequest, fix *model.Fix) (*pipeline.Response, error) {
 	if !h.allow() {
 		return nil, ErrRateLimited

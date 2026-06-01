@@ -96,6 +96,11 @@ func (d *Dispatcher) DispatchPrimary(ctx context.Context, client, primary string
 		return nil, errors.New("primary relay not found: " + primary)
 	}
 
+	if fix == nil && requiresFix(r) {
+		d.logger.Debug("skipping primary, requires fix", "client", client, "destination", primary)
+		return nil, nil
+	}
+
 	return d.send(ctx, r, client, raw, fix), nil
 }
 
@@ -107,6 +112,10 @@ func (d *Dispatcher) DispatchFanout(client string, destinations []string, primar
 
 		w, ok := d.workers[name]
 		if !ok {
+			continue
+		}
+
+		if fix == nil && requiresFix(w.relay) {
 			continue
 		}
 
