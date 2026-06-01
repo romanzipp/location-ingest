@@ -6,7 +6,15 @@ web:
   max_requests_per_client: 500
 
 clients:
+  # A client is a single device that sends location info
   - name: roman
+    # Define the endpoints + kinds for the locaiton ingest
+    #
+    # kind "owntracks"
+    #  -> point your Owntracks App to `<ingest-url>/ot/roman`
+    #
+    # kind "traccar"
+    #  -> pooint your Traccar Client App to `<ingest-url>/tr/roman`
     sources:
       - kind: owntracks
         path: /ot/roman
@@ -17,6 +25,8 @@ clients:
         primary: traccar-server
 
     destinations:
+      # Each incoming source will send the location to all of those destinations:
+
       owntracks-recorder:
         username: roman
         device: phone
@@ -30,6 +40,17 @@ clients:
       kuma:
 
 destinations:
+  # Define all available destinations
+  #
+  # kind "owntracks_recorder"
+  #  -> Owntracks Recorder Server
+  #
+  # kind "traccar_osmand"
+  #  -> Traccar Server
+  #
+  # kind "heartbeat"
+  #  -> uptime monitoring like UptimeKuma, Kuvasz
+
   - name: owntracks-recorder
     kind: owntracks_recorder
     url: https://recorder.example.com/pub
