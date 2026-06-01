@@ -23,14 +23,14 @@ type Server struct {
 }
 
 func New(cfg *config.Config, logger *slog.Logger) (*Server, error) {
-	ring := store.NewRing(cfg.Web.MaxFixesPerClient)
+	ring := store.NewRing(cfg.Web.MaxRequestsPerClient)
 
 	relays, err := relay.Build(cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	dispatcher := pipeline.NewDispatcher(logger, ring, relays)
+	dispatcher := pipeline.NewDispatcher(logger, relays)
 
 	s := &Server{
 		logger:     logger,

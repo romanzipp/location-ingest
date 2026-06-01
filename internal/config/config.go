@@ -20,8 +20,8 @@ type Server struct {
 }
 
 type Web struct {
-	Enabled           bool `yaml:"enabled"`
-	MaxFixesPerClient int  `yaml:"max_fixes_per_client"`
+	Enabled             bool `yaml:"enabled"`
+	MaxRequestsPerClient int `yaml:"max_requests_per_client"`
 }
 
 type Client struct {
@@ -81,8 +81,8 @@ func (c *Config) applyDefaults() {
 		c.Server.Listen = ":8080"
 	}
 
-	if c.Web.MaxFixesPerClient <= 0 {
-		c.Web.MaxFixesPerClient = 500
+	if c.Web.MaxRequestsPerClient <= 0 {
+		c.Web.MaxRequestsPerClient = 500
 	}
 
 	for i := range c.Destinations {

@@ -8,26 +8,16 @@
         <thead>
         <tr>
             <th>client</th>
-            <th>source</th>
-            <th>last fix</th>
-            <th class="num">lat</th>
-            <th class="num">lon</th>
-            <th></th>
+            <th>requests</th>
+            <th>last seen</th>
         </tr>
         </thead>
         <tbody>
         {{range .Clients}}
             <tr>
                 <td><a href="/clients/{{.Name}}">{{.Name}}</a></td>
-                {{if .LastFix}}
-                    <td>{{.LastFix.Source}}</td>
-                    <td class="muted">{{formatTime .LastFix.Time}}</td>
-                    <td class="num">{{printf "%.5f" .LastFix.Lat}}</td>
-                    <td class="num">{{printf "%.5f" .LastFix.Lon}}</td>
-                    <td>{{len .Fixes}} fixes</td>
-                {{else}}
-                    <td colspan="5" class="muted">no fixes yet</td>
-                {{end}}
+                <td class="num">{{.Count}}</td>
+                <td class="muted">{{formatTime .LastSeen}}</td>
             </tr>
         {{end}}
         </tbody>

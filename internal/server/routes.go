@@ -8,6 +8,7 @@ import (
 	"codeberg.org/romanzipp/location-ingest/internal/ingest/traccar"
 	"codeberg.org/romanzipp/location-ingest/internal/model"
 	"codeberg.org/romanzipp/location-ingest/internal/pipeline"
+	"codeberg.org/romanzipp/location-ingest/internal/store"
 )
 
 type routeContext struct {
@@ -41,24 +42,34 @@ func (s *Server) handleIngress(w http.ResponseWriter, r *http.Request, rc routeC
 	logIngress(s.logger, r, raw, rc)
 
 	fix := s.parseFix(rc, raw)
-	if fix != nil {
-		s.ring.AddFix(*fix)
+
+	req := &store.IngressRequest{
+		Client: rc.client,
+		Source: rc.kind,
+		Method: raw.Method,
+		Path:   raw.Path,
+		Query:  raw.Query,
+		Header: raw.Header,
+		Body:   raw.Body,
+		HasFix: fix != nil,
 	}
 
+	s.ring.Add(req)
+
 	if rc.primary == "" {
-		s.dispatcher.DispatchFanout(rc.client, rc.destinations, "", raw, fix)
+		s.dispatcher.DispatchFanout(req, rc.destinations, "", raw, fix)
 		writeDefaultResponse(w, rc.kind)
 		return
 	}
 
-	resp, err := s.dispatcher.DispatchPrimary(r.Context(), rc.client, rc.primary, raw, fix)
+	resp, err := s.dispatcher.DispatchPrimary(r.Context(), req, rc.primary, raw, fix)
 	if err != nil {
 		s.logger.Warn("primary dispatch failed", "client", rc.client, "destination", rc.primary, "err", err)
 		http.Error(w, "upstream error", http.StatusBadGateway)
 		return
 	}
 
-	s.dispatcher.DispatchFanout(rc.client, rc.destinations, rc.primary, raw, fix)
+	s.dispatcher.DispatchFanout(req, rc.destinations, rc.primary, raw, fix)
 
 	if resp == nil {
 		writeDefaultResponse(w, rc.kind)

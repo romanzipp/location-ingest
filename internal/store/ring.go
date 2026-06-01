@@ -2,26 +2,72 @@ package store
 
 import (
 	"sync"
+	"sync/atomic"
 	"time"
-
-	"codeberg.org/romanzipp/location-ingest/internal/model"
 )
 
-type DestinationStatus struct {
+type DestinationResult struct {
 	Name string
 
-	LastTime   time.Time
-	LastStatus int
-	LastError  string
+	At       time.Time
+	Status   int
+	Duration time.Duration
+
+	Error   string
+	Skipped string
+}
+
+func (d DestinationResult) OK() bool {
+	return d.Status >= 200 && d.Status < 300
+}
+
+type IngressRequest struct {
+	ID uint64
+
+	Time   time.Time
+	Client string
+	Source string
+
+	Method string
+	Path   string
+
+	Query  map[string][]string
+	Header map[string][]string
+	Body   []byte
+
+	HasFix bool
+
+	mu           sync.Mutex
+	destinations []DestinationResult
+}
+
+func (r *IngressRequest) AddResult(d DestinationResult) {
+	if d.At.IsZero() {
+		d.At = time.Now().UTC()
+	}
+
+	r.mu.Lock()
+	r.destinations = append(r.destinations, d)
+	r.mu.Unlock()
+}
+
+func (r *IngressRequest) Destinations() []DestinationResult {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	out := make([]DestinationResult, len(r.destinations))
+	copy(out, r.destinations)
+
+	return out
 }
 
 type ClientState struct {
 	Name string
 
-	LastFix *model.Fix
-	Fixes   []model.Fix
+	LastSeen time.Time
+	Count    int
 
-	Destinations []DestinationStatus
+	Requests []*IngressRequest
 }
 
 type Ring struct {
@@ -30,15 +76,13 @@ type Ring struct {
 
 	clients map[string]*entry
 	order   []string
+
+	nextID atomic.Uint64
 }
 
 type entry struct {
-	name string
-
-	fixes []model.Fix
-
-	dest    map[string]*DestinationStatus
-	destOrd []string
+	name     string
+	requests []*IngressRequest
 }
 
 func NewRing(capacity int) *Ring {
@@ -52,47 +96,37 @@ func NewRing(capacity int) *Ring {
 	}
 }
 
+func (r *Ring) Add(req *IngressRequest) {
+	if req.ID == 0 {
+		req.ID = r.nextID.Add(1)
+	}
+
+	if req.Time.IsZero() {
+		req.Time = time.Now().UTC()
+	}
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	e := r.client(req.Client)
+	e.requests = append(e.requests, req)
+
+	if len(e.requests) > r.capacity {
+		e.requests = e.requests[len(e.requests)-r.capacity:]
+	}
+}
+
 func (r *Ring) client(name string) *entry {
 	e, ok := r.clients[name]
 	if ok {
 		return e
 	}
 
-	e = &entry{name: name, dest: map[string]*DestinationStatus{}}
+	e = &entry{name: name}
 	r.clients[name] = e
 	r.order = append(r.order, name)
 
 	return e
-}
-
-func (r *Ring) AddFix(fix model.Fix) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	e := r.client(fix.Client)
-
-	e.fixes = append(e.fixes, fix)
-	if len(e.fixes) > r.capacity {
-		e.fixes = e.fixes[len(e.fixes)-r.capacity:]
-	}
-}
-
-func (r *Ring) RecordDestination(client, dest string, status int, errMsg string) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	e := r.client(client)
-
-	s, ok := e.dest[dest]
-	if !ok {
-		s = &DestinationStatus{Name: dest}
-		e.dest[dest] = s
-		e.destOrd = append(e.destOrd, dest)
-	}
-
-	s.LastTime = time.Now()
-	s.LastStatus = status
-	s.LastError = errMsg
 }
 
 func (r *Ring) Clients() []ClientState {
@@ -101,7 +135,7 @@ func (r *Ring) Clients() []ClientState {
 
 	out := make([]ClientState, 0, len(r.order))
 	for _, n := range r.order {
-		out = append(out, r.snapshot(r.clients[n]))
+		out = append(out, r.snapshot(r.clients[n], false))
 	}
 
 	return out
@@ -116,26 +150,40 @@ func (r *Ring) Client(name string) (ClientState, bool) {
 		return ClientState{Name: name}, false
 	}
 
-	return r.snapshot(e), true
+	return r.snapshot(e, true), true
 }
 
-func (r *Ring) snapshot(e *entry) ClientState {
-	cs := ClientState{Name: e.name}
+func (r *Ring) Request(client string, id uint64) (*IngressRequest, bool) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 
-	if n := len(e.fixes); n > 0 {
-		cp := make([]model.Fix, n)
-		copy(cp, e.fixes)
-
-		cs.Fixes = cp
-
-		last := cs.Fixes[n-1]
-		cs.LastFix = &last
+	e, ok := r.clients[client]
+	if !ok {
+		return nil, false
 	}
 
-	cs.Destinations = make([]DestinationStatus, 0, len(e.destOrd))
-	for _, n := range e.destOrd {
-		cs.Destinations = append(cs.Destinations, *e.dest[n])
+	for _, req := range e.requests {
+		if req.ID == id {
+			return req, true
+		}
 	}
+
+	return nil, false
+}
+
+func (r *Ring) snapshot(e *entry, withRequests bool) ClientState {
+	cs := ClientState{Name: e.name, Count: len(e.requests)}
+
+	if cs.Count > 0 {
+		cs.LastSeen = e.requests[cs.Count-1].Time
+	}
+
+	if !withRequests {
+		return cs
+	}
+
+	cs.Requests = make([]*IngressRequest, cs.Count)
+	copy(cs.Requests, e.requests)
 
 	return cs
 }

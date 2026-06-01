@@ -12,14 +12,13 @@ import (
 )
 
 const (
-	queueSize       = 32
-	fanoutTimeout   = 15 * time.Second
-	shutdownGrace   = 5 * time.Second
+	queueSize     = 32
+	fanoutTimeout = 15 * time.Second
+	shutdownGrace = 5 * time.Second
 )
 
 type Dispatcher struct {
 	logger *slog.Logger
-	ring   *store.Ring
 
 	relays  map[string]Relay
 	workers map[string]*worker
@@ -35,16 +34,15 @@ type worker struct {
 }
 
 type job struct {
-	client string
+	req *store.IngressRequest
 
 	raw *RawRequest
 	fix *model.Fix
 }
 
-func NewDispatcher(logger *slog.Logger, ring *store.Ring, relays map[string]Relay) *Dispatcher {
+func NewDispatcher(logger *slog.Logger, relays map[string]Relay) *Dispatcher {
 	d := &Dispatcher{
 		logger:  logger,
-		ring:    ring,
 		relays:  relays,
 		workers: make(map[string]*worker, len(relays)),
 		closed:  make(chan struct{}),
@@ -66,45 +64,51 @@ func (d *Dispatcher) run(w *worker) {
 
 	for j := range w.ch {
 		ctx, cancel := context.WithTimeout(context.Background(), fanoutTimeout)
-		d.send(ctx, w.relay, j.client, j.raw, j.fix)
+		d.send(ctx, w.relay, j.req, j.raw, j.fix)
 		cancel()
 	}
 }
 
-func (d *Dispatcher) send(ctx context.Context, r Relay, client string, raw *RawRequest, fix *model.Fix) *Response {
+func (d *Dispatcher) send(ctx context.Context, r Relay, req *store.IngressRequest, raw *RawRequest, fix *model.Fix) *Response {
+	start := time.Now()
+
 	resp, err := r.Send(ctx, raw, fix)
 
-	status := 0
+	result := store.DestinationResult{
+		Name:     r.Name(),
+		At:       time.Now().UTC(),
+		Duration: time.Since(start),
+	}
+
 	if resp != nil {
-		status = resp.Status
+		result.Status = resp.Status
 	}
 
-	errMsg := ""
 	if err != nil {
-		errMsg = err.Error()
-		d.logger.Warn("relay failed", "client", client, "destination", r.Name(), "err", err)
+		result.Error = err.Error()
+		d.logger.Warn("relay failed", "client", req.Client, "destination", r.Name(), "err", err)
 	}
 
-	d.ring.RecordDestination(client, r.Name(), status, errMsg)
+	req.AddResult(result)
 
 	return resp
 }
 
-func (d *Dispatcher) DispatchPrimary(ctx context.Context, client, primary string, raw *RawRequest, fix *model.Fix) (*Response, error) {
+func (d *Dispatcher) DispatchPrimary(ctx context.Context, req *store.IngressRequest, primary string, raw *RawRequest, fix *model.Fix) (*Response, error) {
 	r, ok := d.relays[primary]
 	if !ok {
 		return nil, errors.New("primary relay not found: " + primary)
 	}
 
 	if fix == nil && requiresFix(r) {
-		d.logger.Debug("skipping primary, requires fix", "client", client, "destination", primary)
+		req.AddResult(store.DestinationResult{Name: primary, Skipped: "requires location fix"})
 		return nil, nil
 	}
 
-	return d.send(ctx, r, client, raw, fix), nil
+	return d.send(ctx, r, req, raw, fix), nil
 }
 
-func (d *Dispatcher) DispatchFanout(client string, destinations []string, primary string, raw *RawRequest, fix *model.Fix) {
+func (d *Dispatcher) DispatchFanout(req *store.IngressRequest, destinations []string, primary string, raw *RawRequest, fix *model.Fix) {
 	for _, name := range destinations {
 		if name == primary {
 			continue
@@ -116,14 +120,15 @@ func (d *Dispatcher) DispatchFanout(client string, destinations []string, primar
 		}
 
 		if fix == nil && requiresFix(w.relay) {
+			req.AddResult(store.DestinationResult{Name: name, Skipped: "requires location fix"})
 			continue
 		}
 
 		select {
-		case w.ch <- job{client: client, raw: raw, fix: fix}:
+		case w.ch <- job{req: req, raw: raw, fix: fix}:
 		default:
-			d.logger.Warn("destination queue full, dropping", "client", client, "destination", name)
-			d.ring.RecordDestination(client, name, 0, "queue full")
+			d.logger.Warn("destination queue full, dropping", "client", req.Client, "destination", name)
+			req.AddResult(store.DestinationResult{Name: name, Skipped: "queue full"})
 		}
 	}
 }

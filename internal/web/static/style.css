@@ -116,3 +116,70 @@ footer {
     font-size: 0.8rem;
     color: var(--muted);
 }
+
+details.req {
+    border: 1px solid var(--border);
+    border-radius: 4px;
+
+    margin-bottom: 0.5rem;
+    padding: 0;
+}
+
+details.req > summary {
+    cursor: pointer;
+    padding: 0.5rem 0.75rem;
+
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+
+    list-style: none;
+}
+
+details.req > summary::-webkit-details-marker {
+    display: none;
+}
+
+details.req .dests {
+    margin-left: auto;
+
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+}
+
+details.req[open] > summary {
+    border-bottom: 1px solid var(--border);
+}
+
+.req-body {
+    padding: 0.5rem 0.75rem 1rem;
+}
+
+.req-body h4 {
+    margin: 1rem 0 0.4rem;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+}
+
+.req-body pre {
+    margin: 0;
+    padding: 0.6rem 0.8rem;
+
+    background: rgba(127, 127, 127, 0.08);
+    border-radius: 4px;
+
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+
+    font-size: 0.85rem;
+}
+
+code {
+    font-family: inherit;
+    word-break: break-all;
+}

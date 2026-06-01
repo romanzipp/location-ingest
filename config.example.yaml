@@ -3,7 +3,7 @@ server:
 
 web:
   enabled: true
-  max_fixes_per_client: 500
+  max_requests_per_client: 500
 
 clients:
   - name: phone-roman

@@ -1,69 +1,100 @@
 {{define "body"}}
 <h2>{{.Client.Name}}</h2>
 
-<h3>destinations</h3>
+<p class="muted">{{.Client.Count}} requests · last seen {{formatTime .Client.LastSeen}}</p>
 
-{{if not .Client.Destinations}}
-    <p class="muted">no relays observed yet.</p>
+{{$reqs := requestViews .Client.Requests}}
+
+{{if not $reqs}}
+    <p class="muted">no requests yet.</p>
 {{else}}
-    <table>
-        <thead>
-        <tr>
-            <th>destination</th>
-            <th>last attempt</th>
-            <th>status</th>
-            <th>error</th>
-        </tr>
-        </thead>
-        <tbody>
-        {{range .Client.Destinations}}
-            <tr>
-                <td>{{.Name}}</td>
-                <td class="muted">{{formatTime .LastTime}}</td>
-                <td>
-                    {{if statusOK .LastStatus}}
-                        <span class="pill ok">{{.LastStatus}}</span>
-                    {{else if .LastStatus}}
-                        <span class="pill err">{{.LastStatus}}</span>
+    {{range $reqs}}
+        <details class="req" {{if eq .ID (index $reqs 0).ID}}open{{end}}>
+            <summary>
+                <span class="muted">{{formatTime .Time}}</span>
+                <span class="pill">{{.Source}}</span>
+                <span class="pill">{{.Method}}</span>
+                <code>{{.Path}}</code>
+                {{if .HasFix}}<span class="pill ok">fix</span>{{end}}
+
+                <span class="dests">
+                {{range .Destinations}}
+                    {{if .Skipped}}
+                        <span class="pill" title="{{.Skipped}}">{{.Name}} · skip</span>
+                    {{else if .OK}}
+                        <span class="pill ok" title="{{.Duration}}">{{.Name}} · {{.Status}}</span>
+                    {{else if .Status}}
+                        <span class="pill err" title="{{.Error}}">{{.Name}} · {{.Status}}</span>
                     {{else}}
-                        <span class="pill">—</span>
+                        <span class="pill err" title="{{.Error}}">{{.Name}} · err</span>
                     {{end}}
-                </td>
-                <td class="muted">{{.LastError}}</td>
-            </tr>
-        {{end}}
-        </tbody>
-    </table>
-{{end}}
+                {{end}}
+                </span>
+            </summary>
 
-<h3>recent fixes</h3>
+            <div class="req-body">
+                {{if .Query}}
+                    <h4>query</h4>
+                    <table>
+                        <tbody>
+                        {{range .Query}}
+                            <tr><th>{{.Key}}</th><td><code>{{.Value}}</code></td></tr>
+                        {{end}}
+                        </tbody>
+                    </table>
+                {{end}}
 
-{{if not .Client.Fixes}}
-    <p class="muted">no fixes yet.</p>
-{{else}}
-    <table>
-        <thead>
-        <tr>
-            <th>time</th>
-            <th>source</th>
-            <th class="num">lat</th>
-            <th class="num">lon</th>
-            <th class="num">acc</th>
-            <th class="num">batt</th>
-        </tr>
-        </thead>
-        <tbody>
-        {{range reverse .Client.Fixes}}
-            <tr>
-                <td class="muted">{{formatTime .Time}}</td>
-                <td>{{.Source}}</td>
-                <td class="num">{{printf "%.5f" .Lat}}</td>
-                <td class="num">{{printf "%.5f" .Lon}}</td>
-                <td class="num">{{printf "%.0f" .Accuracy}}</td>
-                <td class="num">{{printf "%.0f" .Battery}}</td>
-            </tr>
-        {{end}}
-        </tbody>
-    </table>
+                {{if .Headers}}
+                    <h4>headers</h4>
+                    <table>
+                        <tbody>
+                        {{range .Headers}}
+                            <tr><th>{{.Key}}</th><td><code>{{.Value}}</code></td></tr>
+                        {{end}}
+                        </tbody>
+                    </table>
+                {{end}}
+
+                {{if .Body}}
+                    <h4>body</h4>
+                    <pre>{{.Body}}</pre>
+                {{end}}
+
+                {{if .Destinations}}
+                    <h4>destinations</h4>
+                    <table>
+                        <thead>
+                        <tr>
+                            <th>destination</th>
+                            <th>status</th>
+                            <th>duration</th>
+                            <th>error / note</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {{range .Destinations}}
+                            <tr>
+                                <td>{{.Name}}</td>
+                                <td>
+                                    {{if .Skipped}}
+                                        <span class="pill">skipped</span>
+                                    {{else if .OK}}
+                                        <span class="pill ok">{{.Status}}</span>
+                                    {{else if .Status}}
+                                        <span class="pill err">{{.Status}}</span>
+                                    {{else}}
+                                        <span class="pill err">err</span>
+                                    {{end}}
+                                </td>
+                                <td class="muted">{{if .Duration}}{{.Duration}}{{else}}—{{end}}</td>
+                                <td class="muted">{{if .Skipped}}{{.Skipped}}{{else}}{{.Error}}{{end}}</td>
+                            </tr>
+                        {{end}}
+                        </tbody>
+                    </table>
+                {{end}}
+            </div>
+        </details>
+    {{end}}
 {{end}}
 {{end}}

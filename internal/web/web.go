@@ -5,10 +5,11 @@ import (
 	"html/template"
 	"io/fs"
 	"net/http"
+	"sort"
+	"strings"
 	"time"
 
 	"codeberg.org/romanzipp/location-ingest/internal/buildinfo"
-	"codeberg.org/romanzipp/location-ingest/internal/model"
 	"codeberg.org/romanzipp/location-ingest/internal/store"
 )
 
@@ -33,11 +34,33 @@ type pageData struct {
 	Client  store.ClientState
 }
 
+type requestView struct {
+	ID uint64
+
+	Time   time.Time
+	Source string
+	Method string
+	Path   string
+
+	HasFix bool
+
+	Query   []kv
+	Headers []kv
+	Body    string
+
+	Destinations []store.DestinationResult
+}
+
+type kv struct {
+	Key   string
+	Value string
+}
+
 func New(ring *store.Ring) (*Handler, error) {
 	funcs := template.FuncMap{
-		"formatTime": formatTime,
-		"statusOK":   statusOK,
-		"reverse":    reverseFixes,
+		"formatTime":   formatTime,
+		"requestViews": buildRequestViews,
+		"isJSON":       isJSON,
 	}
 
 	tpl, err := template.New("").Funcs(funcs).ParseFS(templatesFS, "templates/*.html")
@@ -127,14 +150,48 @@ func formatTime(t time.Time) string {
 	return t.UTC().Format("2006-01-02 15:04:05 UTC")
 }
 
-func statusOK(code int) bool {
-	return code >= 200 && code < 300
+func buildRequestViews(reqs []*store.IngressRequest) []requestView {
+	out := make([]requestView, 0, len(reqs))
+
+	for i := len(reqs) - 1; i >= 0; i-- {
+		req := reqs[i]
+
+		out = append(out, requestView{
+			ID:           req.ID,
+			Time:         req.Time,
+			Source:       req.Source,
+			Method:       req.Method,
+			Path:         req.Path,
+			HasFix:       req.HasFix,
+			Query:        sortedKV(req.Query),
+			Headers:      sortedKV(req.Header),
+			Body:         string(req.Body),
+			Destinations: req.Destinations(),
+		})
+	}
+
+	return out
 }
 
-func reverseFixes(in []model.Fix) []model.Fix {
-	out := make([]model.Fix, len(in))
-	for i, f := range in {
-		out[len(in)-1-i] = f
+func sortedKV(m map[string][]string) []kv {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
 	}
+	sort.Strings(keys)
+
+	out := make([]kv, 0, len(keys))
+	for _, k := range keys {
+		out = append(out, kv{Key: k, Value: strings.Join(m[k], ", ")})
+	}
+
 	return out
+}
+
+func isJSON(body string) bool {
+	t := strings.TrimSpace(body)
+	if t == "" {
+		return false
+	}
+	return t[0] == '{' || t[0] == '['
 }
