@@ -21,13 +21,18 @@ type TraccarOsmand struct {
 	client *http.Client
 }
 
-func NewTraccarOsmand(d *config.Destination) *TraccarOsmand {
-	return &TraccarOsmand{
-		name:     d.Name,
-		url:      d.URL,
-		deviceID: d.DeviceID,
-		client:   newHTTPClient(d.Timeout),
+func NewTraccarOsmand(d *config.Destination, cd *config.ClientDestination) *TraccarOsmand {
+	r := &TraccarOsmand{
+		name:   d.Name,
+		url:    d.URL,
+		client: newHTTPClient(d.Timeout),
 	}
+
+	if cd != nil {
+		r.deviceID = cd.DeviceID
+	}
+
+	return r
 }
 
 func (r *TraccarOsmand) Name() string { return r.name }

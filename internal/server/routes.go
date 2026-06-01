@@ -2,28 +2,42 @@ package server
 
 import (
 	"net/http"
+	"sort"
 
 	"codeberg.org/romanzipp/location-ingest/internal/config"
 	"codeberg.org/romanzipp/location-ingest/internal/ingest/owntracks"
 	"codeberg.org/romanzipp/location-ingest/internal/ingest/traccar"
 	"codeberg.org/romanzipp/location-ingest/internal/model"
 	"codeberg.org/romanzipp/location-ingest/internal/pipeline"
+	"codeberg.org/romanzipp/location-ingest/internal/relay"
 	"codeberg.org/romanzipp/location-ingest/internal/store"
 )
 
 type routeContext struct {
-	client       string
-	kind         string
+	client string
+	kind   string
+
 	primary      string
 	destinations []string
 }
 
 func (s *Server) buildRoute(cl config.Client, src config.Source) http.Handler {
+	keys := make([]string, 0, len(cl.Destinations))
+	for dn := range cl.Destinations {
+		keys = append(keys, relay.RelayKey(cl.Name, dn))
+	}
+	sort.Strings(keys)
+
+	primary := ""
+	if src.Primary != "" {
+		primary = relay.RelayKey(cl.Name, src.Primary)
+	}
+
 	rc := routeContext{
 		client:       cl.Name,
 		kind:         src.Kind,
-		primary:      src.Primary,
-		destinations: cl.Destinations,
+		primary:      primary,
+		destinations: keys,
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

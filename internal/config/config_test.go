@@ -29,22 +29,34 @@ func TestLoadExample(t *testing.T) {
 		t.Fatalf("want 1 client, got %d", len(cfg.Clients))
 	}
 
-	if cfg.DestinationByName("kuma") == nil {
-		t.Fatal("missing kuma destination")
+	cl := cfg.Clients[0]
+	if _, ok := cl.Destinations["kuma"]; !ok {
+		t.Fatal("missing kuma in client destinations")
+	}
+
+	rec := cl.Destinations["owntracks-recorder"]
+	if rec == nil || rec.Username == "" {
+		t.Fatalf("owntracks-recorder client overrides missing: %+v", rec)
 	}
 }
 
 func TestRejectsDuplicatePath(t *testing.T) {
 	body := `
+destinations:
+  - name: r
+    kind: owntracks_recorder
+    url: http://r
 clients:
   - name: a
     sources:
       - {kind: owntracks, path: /x}
-    destinations: []
+    destinations:
+      r:
   - name: b
     sources:
       - {kind: traccar, path: /x}
-    destinations: []
+    destinations:
+      r:
 `
 
 	path := writeTempConfig(t, body)
@@ -60,12 +72,37 @@ clients:
   - name: a
     sources:
       - {kind: owntracks, path: /x, primary: ghost}
-    destinations: [ghost]
+    destinations:
+      ghost:
 `
 
 	path := writeTempConfig(t, body)
 
 	if _, err := Load(path); err == nil {
 		t.Fatal("expected unknown destination error, got nil")
+	}
+}
+
+func TestRejectsPrimaryNotInClientDestinations(t *testing.T) {
+	body := `
+destinations:
+  - name: r
+    kind: owntracks_recorder
+    url: http://r
+  - name: s
+    kind: owntracks_recorder
+    url: http://s
+clients:
+  - name: a
+    sources:
+      - {kind: owntracks, path: /x, primary: s}
+    destinations:
+      r:
+`
+
+	path := writeTempConfig(t, body)
+
+	if _, err := Load(path); err == nil {
+		t.Fatal("expected primary-not-in-destinations error, got nil")
 	}
 }

@@ -6,35 +6,37 @@ web:
   max_requests_per_client: 500
 
 clients:
-  - name: phone-roman
+  - name: roman
     sources:
       - kind: owntracks
-        path: /ot/phone-roman
+        path: /ot/roman
         primary: owntracks-recorder
 
       - kind: traccar
-        path: /tr/phone-roman
+        path: /tr/roman
         primary: traccar-server
 
     destinations:
-      - owntracks-recorder
-      - traccar-server
-      - kuma
+      owntracks-recorder:
+        username: roman
+        device: phone
+        basic_auth:
+          user: roman
+          password: ${OWNTRACKS_PASSWORD}
+
+      traccar-server:
+        device_id: roman-phone
+
+      kuma:
 
 destinations:
   - name: owntracks-recorder
     kind: owntracks_recorder
     url: https://recorder.example.com/pub
-    username: roman
-    device: phone
-    basic_auth:
-      user: roman
-      password: ${OWNTRACKS_PASSWORD}
 
   - name: traccar-server
     kind: traccar_osmand
     url: https://traccar.example.com
-    device_id: phone-roman
 
   - name: kuma
     kind: heartbeat

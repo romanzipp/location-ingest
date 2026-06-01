@@ -20,14 +20,28 @@ type Server struct {
 }
 
 type Web struct {
-	Enabled             bool `yaml:"enabled"`
-	MaxRequestsPerClient int `yaml:"max_requests_per_client"`
+	Enabled              bool `yaml:"enabled"`
+	MaxRequestsPerClient int  `yaml:"max_requests_per_client"`
 }
 
 type Client struct {
-	Name         string   `yaml:"name"`
-	Sources      []Source `yaml:"sources"`
-	Destinations []string `yaml:"destinations"`
+	Name    string   `yaml:"name"`
+	Sources []Source `yaml:"sources"`
+
+	Destinations map[string]*ClientDestination `yaml:"destinations"`
+}
+
+type ClientDestination struct {
+	Username  string     `yaml:"username,omitempty"`
+	Device    string     `yaml:"device,omitempty"`
+	BasicAuth *BasicAuth `yaml:"basic_auth,omitempty"`
+
+	DeviceID string `yaml:"device_id,omitempty"`
+}
+
+type BasicAuth struct {
+	User     string `yaml:"user"`
+	Password string `yaml:"password"`
 }
 
 type Source struct {
@@ -41,22 +55,11 @@ type Destination struct {
 	Kind string `yaml:"kind"`
 	URL  string `yaml:"url"`
 
-	Username  string     `yaml:"username,omitempty"`
-	Device    string     `yaml:"device,omitempty"`
-	BasicAuth *BasicAuth `yaml:"basic_auth,omitempty"`
-
-	DeviceID string `yaml:"device_id,omitempty"`
-
 	Method string `yaml:"method,omitempty"`
 	Body   string `yaml:"body,omitempty"`
 
 	MinInterval time.Duration `yaml:"min_interval,omitempty"`
 	Timeout     time.Duration `yaml:"timeout,omitempty"`
-}
-
-type BasicAuth struct {
-	User     string `yaml:"user"`
-	Password string `yaml:"password"`
 }
 
 const (
@@ -172,15 +175,13 @@ func (c *Config) validateClients(destIdx map[string]*Destination) error {
 			return fmt.Errorf("client %q: no sources", cl.Name)
 		}
 
-		clientDests := map[string]struct{}{}
-		for _, dn := range cl.Destinations {
+		for dn := range cl.Destinations {
 			if _, ok := destIdx[dn]; !ok {
-				return fmt.Errorf("client %q: destination %q not defined", cl.Name, dn)
+				return fmt.Errorf("client %q: destination %q not defined at top level", cl.Name, dn)
 			}
-			clientDests[dn] = struct{}{}
 		}
 
-		if err := validateSources(cl, clientDests, paths); err != nil {
+		if err := validateSources(cl, paths); err != nil {
 			return err
 		}
 	}
@@ -188,7 +189,7 @@ func (c *Config) validateClients(destIdx map[string]*Destination) error {
 	return nil
 }
 
-func validateSources(cl Client, clientDests map[string]struct{}, paths map[string]string) error {
+func validateSources(cl Client, paths map[string]string) error {
 	for _, s := range cl.Sources {
 		switch s.Kind {
 		case KindOwnTracks, KindTraccar:
@@ -209,8 +210,8 @@ func validateSources(cl Client, clientDests map[string]struct{}, paths map[strin
 			continue
 		}
 
-		if _, ok := clientDests[s.Primary]; !ok {
-			return fmt.Errorf("client %q: primary %q not in destinations list", cl.Name, s.Primary)
+		if _, ok := cl.Destinations[s.Primary]; !ok {
+			return fmt.Errorf("client %q: primary %q not in destinations map", cl.Name, s.Primary)
 		}
 	}
 

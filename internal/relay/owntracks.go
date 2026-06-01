@@ -26,19 +26,22 @@ type OwnTracksRecorder struct {
 	client *http.Client
 }
 
-func NewOwnTracksRecorder(d *config.Destination) *OwnTracksRecorder {
+func NewOwnTracksRecorder(d *config.Destination, cd *config.ClientDestination) *OwnTracksRecorder {
 	r := &OwnTracksRecorder{
-		name:     d.Name,
-		url:      d.URL,
-		username: d.Username,
-		device:   d.Device,
-		client:   newHTTPClient(d.Timeout),
+		name:   d.Name,
+		url:    d.URL,
+		client: newHTTPClient(d.Timeout),
 	}
 
-	if d.BasicAuth != nil && d.BasicAuth.User != "" {
-		r.basicUser = d.BasicAuth.User
-		r.basicPass = d.BasicAuth.Password
-		r.hasBasic = true
+	if cd != nil {
+		r.username = cd.Username
+		r.device = cd.Device
+
+		if cd.BasicAuth != nil && cd.BasicAuth.User != "" {
+			r.basicUser = cd.BasicAuth.User
+			r.basicPass = cd.BasicAuth.Password
+			r.hasBasic = true
+		}
 	}
 
 	return r

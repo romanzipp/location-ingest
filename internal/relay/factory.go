@@ -7,30 +7,45 @@ import (
 	"codeberg.org/romanzipp/location-ingest/internal/pipeline"
 )
 
+// RelayKey builds the dispatcher key for a (client, destination) pair.
+func RelayKey(client, destination string) string {
+	return client + "/" + destination
+}
+
 func Build(cfg *config.Config) (map[string]pipeline.Relay, error) {
-	out := make(map[string]pipeline.Relay, len(cfg.Destinations))
-
+	destIdx := make(map[string]*config.Destination, len(cfg.Destinations))
 	for i := range cfg.Destinations {
-		d := &cfg.Destinations[i]
+		destIdx[cfg.Destinations[i].Name] = &cfg.Destinations[i]
+	}
 
-		r, err := buildOne(d)
-		if err != nil {
-			return nil, fmt.Errorf("destination %q: %w", d.Name, err)
+	out := map[string]pipeline.Relay{}
+
+	for _, cl := range cfg.Clients {
+		for dn, cd := range cl.Destinations {
+			d, ok := destIdx[dn]
+			if !ok {
+				return nil, fmt.Errorf("client %q: destination %q not defined", cl.Name, dn)
+			}
+
+			r, err := buildOne(d, cd)
+			if err != nil {
+				return nil, fmt.Errorf("client %q destination %q: %w", cl.Name, dn, err)
+			}
+
+			out[RelayKey(cl.Name, dn)] = r
 		}
-
-		out[d.Name] = r
 	}
 
 	return out, nil
 }
 
-func buildOne(d *config.Destination) (pipeline.Relay, error) {
+func buildOne(d *config.Destination, cd *config.ClientDestination) (pipeline.Relay, error) {
 	switch d.Kind {
 	case config.KindOwnTracksRecorder:
-		return NewOwnTracksRecorder(d), nil
+		return NewOwnTracksRecorder(d, cd), nil
 
 	case config.KindTraccarOsmand:
-		return NewTraccarOsmand(d), nil
+		return NewTraccarOsmand(d, cd), nil
 
 	case config.KindHeartbeat:
 		return NewHeartbeat(d)
