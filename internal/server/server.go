@@ -18,7 +18,8 @@ type Server struct {
 	ring       *store.Ring
 	dispatcher *pipeline.Dispatcher
 
-	mux *http.ServeMux
+	mux     *http.ServeMux
+	handler http.Handler
 }
 
 func New(cfg *config.Config, logger *slog.Logger) (*Server, error) {
@@ -41,11 +42,16 @@ func New(cfg *config.Config, logger *slog.Logger) (*Server, error) {
 
 	s.registerRoutes()
 
+	s.handler = accessLog(logger, s.mux)
+	if httpLogEnabled() {
+		logger.Info("http request logging enabled", "env", httpLogEnv)
+	}
+
 	return s, nil
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	s.mux.ServeHTTP(w, r)
+	s.handler.ServeHTTP(w, r)
 }
 
 func (s *Server) Close() {
