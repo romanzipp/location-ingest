@@ -62,10 +62,16 @@ func NewDispatcher(logger *slog.Logger, relays map[string]Relay) *Dispatcher {
 func (d *Dispatcher) run(w *worker) {
 	defer d.wg.Done()
 
-	for j := range w.ch {
-		ctx, cancel := context.WithTimeout(context.Background(), fanoutTimeout)
-		d.send(ctx, w.relay, j.req, j.raw, j.loc)
-		cancel()
+	for {
+		select {
+		case <-d.closed:
+			return
+
+		case j := <-w.ch:
+			ctx, cancel := context.WithTimeout(context.Background(), fanoutTimeout)
+			d.send(ctx, w.relay, j.req, j.raw, j.loc)
+			cancel()
+		}
 	}
 }
 
@@ -125,7 +131,11 @@ func (d *Dispatcher) DispatchFanout(req *store.IngressRequest, destinations []st
 		}
 
 		select {
+		case <-d.closed:
+			req.AddResult(store.DestinationResult{Name: name, Skipped: "shutting down"})
+
 		case w.ch <- job{req: req, raw: raw, loc: loc}:
+
 		default:
 			d.logger.Warn("destination queue full, dropping", "client", req.Client, "destination", name)
 			req.AddResult(store.DestinationResult{Name: name, Skipped: "queue full"})
@@ -135,9 +145,7 @@ func (d *Dispatcher) DispatchFanout(req *store.IngressRequest, destinations []st
 
 func (d *Dispatcher) Close() {
 	d.once.Do(func() {
-		for _, w := range d.workers {
-			close(w.ch)
-		}
+		close(d.closed)
 
 		done := make(chan struct{})
 		go func() {
@@ -150,7 +158,5 @@ func (d *Dispatcher) Close() {
 		case <-time.After(shutdownGrace):
 			d.logger.Warn("dispatcher shutdown timed out")
 		}
-
-		close(d.closed)
 	})
 }

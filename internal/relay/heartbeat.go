@@ -113,7 +113,7 @@ func (h *Heartbeat) Send(ctx context.Context, _ *pipeline.RawRequest, loc *model
 	}
 	defer resp.Body.Close()
 
-	respBody, err := io.ReadAll(resp.Body)
+	respBody, err := readCapped(resp.Body)
 	if err != nil {
 		return nil, err
 	}

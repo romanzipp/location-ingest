@@ -3,7 +3,6 @@ package relay
 import (
 	"context"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -15,17 +14,22 @@ import (
 
 type TraccarOsmand struct {
 	name string
-	url  string
 
+	target   *url.URL
 	deviceID string
 
 	client *http.Client
 }
 
-func NewTraccarOsmand(d *config.Destination, cd *config.ClientDestination) *TraccarOsmand {
+func NewTraccarOsmand(d *config.Destination, cd *config.ClientDestination) (*TraccarOsmand, error) {
+	target, err := url.Parse(d.URL)
+	if err != nil {
+		return nil, fmt.Errorf("parse url: %w", err)
+	}
+
 	r := &TraccarOsmand{
 		name:   d.Name,
-		url:    d.URL,
+		target: target,
 		client: newHTTPClient(d.Timeout),
 	}
 
@@ -33,7 +37,7 @@ func NewTraccarOsmand(d *config.Destination, cd *config.ClientDestination) *Trac
 		r.deviceID = cd.DeviceID
 	}
 
-	return r
+	return r, nil
 }
 
 func (r *TraccarOsmand) Name() string { return r.name }
@@ -41,10 +45,7 @@ func (r *TraccarOsmand) Name() string { return r.name }
 func (r *TraccarOsmand) RequiresLocation() bool { return true }
 
 func (r *TraccarOsmand) Send(ctx context.Context, _ *pipeline.RawRequest, loc *model.Location) (*pipeline.Response, error) {
-	target, err := url.Parse(r.url)
-	if err != nil {
-		return nil, fmt.Errorf("parse url: %w", err)
-	}
+	target := *r.target
 
 	q := target.Query()
 
@@ -89,7 +90,7 @@ func (r *TraccarOsmand) Send(ctx context.Context, _ *pipeline.RawRequest, loc *m
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := readCapped(resp.Body)
 	if err != nil {
 		return nil, err
 	}

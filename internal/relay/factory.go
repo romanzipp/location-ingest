@@ -42,10 +42,10 @@ func Build(cfg *config.Config) (map[string]pipeline.Relay, error) {
 func buildOne(d *config.Destination, cd *config.ClientDestination) (pipeline.Relay, error) {
 	switch d.Kind {
 	case config.KindOwnTracksRecorder:
-		return NewOwnTracksRecorder(d, cd), nil
+		return NewOwnTracksRecorder(d, cd)
 
 	case config.KindTraccarOsmand:
-		return NewTraccarOsmand(d, cd), nil
+		return NewTraccarOsmand(d, cd)
 
 	case config.KindHeartbeat:
 		return NewHeartbeat(d)

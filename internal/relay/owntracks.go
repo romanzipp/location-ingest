@@ -3,7 +3,6 @@ package relay
 import (
 	"context"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 
@@ -14,8 +13,8 @@ import (
 
 type OwnTracksRecorder struct {
 	name string
-	url  string
 
+	target   *url.URL
 	username string
 	device   string
 
@@ -26,10 +25,15 @@ type OwnTracksRecorder struct {
 	client *http.Client
 }
 
-func NewOwnTracksRecorder(d *config.Destination, cd *config.ClientDestination) *OwnTracksRecorder {
+func NewOwnTracksRecorder(d *config.Destination, cd *config.ClientDestination) (*OwnTracksRecorder, error) {
+	target, err := url.Parse(d.URL)
+	if err != nil {
+		return nil, fmt.Errorf("parse url: %w", err)
+	}
+
 	r := &OwnTracksRecorder{
 		name:   d.Name,
-		url:    d.URL,
+		target: target,
 		client: newHTTPClient(d.Timeout),
 	}
 
@@ -44,16 +48,13 @@ func NewOwnTracksRecorder(d *config.Destination, cd *config.ClientDestination) *
 		}
 	}
 
-	return r
+	return r, nil
 }
 
 func (r *OwnTracksRecorder) Name() string { return r.name }
 
 func (r *OwnTracksRecorder) Send(ctx context.Context, raw *pipeline.RawRequest, _ *model.Location) (*pipeline.Response, error) {
-	target, err := url.Parse(r.url)
-	if err != nil {
-		return nil, fmt.Errorf("parse url: %w", err)
-	}
+	target := *r.target
 
 	q := target.Query()
 	if r.username != "" {
@@ -92,7 +93,7 @@ func (r *OwnTracksRecorder) Send(ctx context.Context, raw *pipeline.RawRequest, 
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := readCapped(resp.Body)
 	if err != nil {
 		return nil, err
 	}

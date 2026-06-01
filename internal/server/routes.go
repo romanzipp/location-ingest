@@ -134,11 +134,6 @@ func proxyResponse(w http.ResponseWriter, resp *pipeline.Response, kind string) 
 		status = http.StatusOK
 	}
 
-	if len(resp.Body) == 0 {
-		writeDefaultResponse(w, kind)
-		return
-	}
-
 	w.WriteHeader(status)
 	_, _ = w.Write(resp.Body)
 }
