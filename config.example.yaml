@@ -35,7 +35,7 @@ clients:
           password: ${OWNTRACKS_PASSWORD}
 
       traccar-server:
-        device_id: roman-phone
+        device_id: "12345678"
 
       kuma:
 
