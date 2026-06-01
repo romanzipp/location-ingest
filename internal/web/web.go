@@ -2,6 +2,7 @@ package web
 
 import (
 	"embed"
+	"fmt"
 	"html/template"
 	"io/fs"
 	"net/http"
@@ -22,8 +23,8 @@ var staticFS embed.FS
 type Handler struct {
 	ring *store.Ring
 
-	templates *template.Template
-	static    http.Handler
+	pages  map[string]*template.Template
+	static http.Handler
 }
 
 type pageData struct {
@@ -63,9 +64,13 @@ func New(ring *store.Ring) (*Handler, error) {
 		"isJSON":       isJSON,
 	}
 
-	tpl, err := template.New("").Funcs(funcs).ParseFS(templatesFS, "templates/*.html")
-	if err != nil {
-		return nil, err
+	pages := map[string]*template.Template{}
+	for _, page := range []string{"index.html", "client.html"} {
+		tpl, err := template.New(page).Funcs(funcs).ParseFS(templatesFS, "templates/layout.html", "templates/"+page)
+		if err != nil {
+			return nil, fmt.Errorf("parse %s: %w", page, err)
+		}
+		pages[page] = tpl
 	}
 
 	sub, err := fs.Sub(staticFS, "static")
@@ -74,9 +79,9 @@ func New(ring *store.Ring) (*Handler, error) {
 	}
 
 	return &Handler{
-		ring:      ring,
-		templates: tpl,
-		static:    http.FileServer(http.FS(sub)),
+		ring:   ring,
+		pages:  pages,
+		static: http.FileServer(http.FS(sub)),
 	}, nil
 }
 
@@ -124,18 +129,13 @@ func (h *Handler) client(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) render(w http.ResponseWriter, page string, data pageData) {
+	tpl, ok := h.pages[page]
+	if !ok {
+		http.Error(w, "unknown page", http.StatusInternalServerError)
+		return
+	}
+
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-
-	tpl, err := h.templates.Clone()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	if _, err := tpl.ParseFS(templatesFS, "templates/"+page); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
 
 	if err := tpl.ExecuteTemplate(w, "layout", data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

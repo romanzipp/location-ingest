@@ -3,6 +3,8 @@ package config
 import (
 	"fmt"
 	"os"
+	"path"
+	"strings"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -76,7 +78,10 @@ func Load(path string) (*Config, error) {
 		return nil, fmt.Errorf("read %s: %w", path, err)
 	}
 
-	expanded := os.ExpandEnv(string(data))
+	expanded, missing := expandEnv(string(data))
+	if len(missing) > 0 {
+		return nil, fmt.Errorf("config references unset env vars: %v", missing)
+	}
 
 	var cfg Config
 	if err := yaml.Unmarshal([]byte(expanded), &cfg); err != nil {
@@ -90,6 +95,25 @@ func Load(path string) (*Config, error) {
 	}
 
 	return &cfg, nil
+}
+
+func expandEnv(s string) (string, []string) {
+	var missing []string
+	seen := map[string]struct{}{}
+
+	out := os.Expand(s, func(name string) string {
+		v, ok := os.LookupEnv(name)
+		if !ok {
+			if _, dup := seen[name]; !dup {
+				missing = append(missing, name)
+				seen[name] = struct{}{}
+			}
+			return ""
+		}
+		return v
+	})
+
+	return out, missing
 }
 
 func (c *Config) applyDefaults() {
@@ -194,6 +218,26 @@ func (c *Config) validateClients(destIdx map[string]*Destination) error {
 	return nil
 }
 
+func validatePath(client, p string) error {
+	if p == "" {
+		return fmt.Errorf("client %q: source path is empty", client)
+	}
+
+	if !strings.HasPrefix(p, "/") {
+		return fmt.Errorf("client %q: source path %q must start with /", client, p)
+	}
+
+	if strings.ContainsAny(p, "?#") {
+		return fmt.Errorf("client %q: source path %q must not contain ? or #", client, p)
+	}
+
+	if path.Clean(p) != p {
+		return fmt.Errorf("client %q: source path %q is not canonical (got %q after cleaning)", client, p, path.Clean(p))
+	}
+
+	return nil
+}
+
 func validateClientDestination(client string, d *Destination, cd *ClientDestination) error {
 	switch d.Kind {
 	case KindTraccarOsmand:
@@ -218,8 +262,8 @@ func validateSources(cl Client, paths map[string]string) error {
 			return fmt.Errorf("client %q: unknown source kind %q", cl.Name, s.Kind)
 		}
 
-		if s.Path == "" || s.Path[0] != '/' {
-			return fmt.Errorf("client %q: source path must start with /", cl.Name)
+		if err := validatePath(cl.Name, s.Path); err != nil {
+			return err
 		}
 
 		if owner, dup := paths[s.Path]; dup {

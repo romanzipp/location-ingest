@@ -20,6 +20,8 @@ func writeTempConfig(t *testing.T, body string) string {
 }
 
 func TestLoadExample(t *testing.T) {
+	t.Setenv("OWNTRACKS_PASSWORD", "dummy")
+
 	cfg, err := Load("../../config.example.yaml")
 	if err != nil {
 		t.Fatalf("load: %v", err)
