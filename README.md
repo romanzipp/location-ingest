@@ -2,6 +2,8 @@
 
 Deploy a unified location ingesting service that relays location data sent from individual apps or clients to multiple sources.
 
+**Mix-and-match any location recording client with any server.**
+
 ## Supported Clients
 
 - [Owntracks](https://owntracks.org/booklet/guide/apps/)
