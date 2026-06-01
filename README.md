@@ -26,6 +26,8 @@ Heartbeats only fire when an actual location was received, so a dead-man timer t
 
 The service ships with an optional dashboard at `/webui` that lists every recent request with its headers, body and per-destination relay status. It runs from memory only, no database. Toggle with `web.enabled` in the config.
 
+![](art/webui.jpeg)
+
 ## Install
 
 Pull the image from GHCR:
