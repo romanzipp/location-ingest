@@ -85,14 +85,16 @@ func New(ring *store.Ring) (*Handler, error) {
 	}, nil
 }
 
+const Prefix = "/webui"
+
 func (h *Handler) Register(mux *http.ServeMux) {
-	mux.HandleFunc("/", h.index)
-	mux.HandleFunc("/clients/", h.client)
-	mux.Handle("/static/", http.StripPrefix("/static/", h.static))
+	mux.HandleFunc(Prefix+"/", h.index)
+	mux.HandleFunc(Prefix+"/clients/", h.client)
+	mux.Handle(Prefix+"/static/", http.StripPrefix(Prefix+"/static/", h.static))
 }
 
 func (h *Handler) index(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/" {
+	if r.URL.Path != Prefix+"/" {
 		http.NotFound(w, r)
 		return
 	}
@@ -107,7 +109,7 @@ func (h *Handler) index(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) client(w http.ResponseWriter, r *http.Request) {
-	name := r.URL.Path[len("/clients/"):]
+	name := r.URL.Path[len(Prefix+"/clients/"):]
 	if name == "" {
 		http.NotFound(w, r)
 		return

@@ -15,7 +15,7 @@
         <tbody>
         {{range .Clients}}
             <tr>
-                <td><a href="/clients/{{.Name}}">{{.Name}}</a></td>
+                <td><a href="/webui/clients/{{.Name}}">{{.Name}}</a></td>
                 <td class="num">{{.Count}}</td>
                 <td class="muted">{{formatTime .LastSeen}}</td>
             </tr>
