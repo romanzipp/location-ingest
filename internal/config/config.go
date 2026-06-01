@@ -175,14 +175,35 @@ func (c *Config) validateClients(destIdx map[string]*Destination) error {
 			return fmt.Errorf("client %q: no sources", cl.Name)
 		}
 
-		for dn := range cl.Destinations {
-			if _, ok := destIdx[dn]; !ok {
+		for dn, cd := range cl.Destinations {
+			d, ok := destIdx[dn]
+			if !ok {
 				return fmt.Errorf("client %q: destination %q not defined at top level", cl.Name, dn)
+			}
+
+			if err := validateClientDestination(cl.Name, d, cd); err != nil {
+				return err
 			}
 		}
 
 		if err := validateSources(cl, paths); err != nil {
 			return err
+		}
+	}
+
+	return nil
+}
+
+func validateClientDestination(client string, d *Destination, cd *ClientDestination) error {
+	switch d.Kind {
+	case KindTraccarOsmand:
+		if cd == nil || cd.DeviceID == "" {
+			return fmt.Errorf("client %q destination %q (traccar_osmand): device_id is required so non-Traccar sources can be relayed", client, d.Name)
+		}
+
+	case KindOwnTracksRecorder:
+		if cd == nil || cd.Username == "" || cd.Device == "" {
+			return fmt.Errorf("client %q destination %q (owntracks_recorder): username and device are required so non-OwnTracks sources can be relayed", client, d.Name)
 		}
 	}
 

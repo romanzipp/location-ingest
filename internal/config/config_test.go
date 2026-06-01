@@ -52,11 +52,15 @@ clients:
       - {kind: owntracks, path: /x}
     destinations:
       r:
+        username: u
+        device: d
   - name: b
     sources:
       - {kind: traccar, path: /x}
     destinations:
       r:
+        username: u
+        device: d
 `
 
 	path := writeTempConfig(t, body)
@@ -98,11 +102,55 @@ clients:
       - {kind: owntracks, path: /x, primary: s}
     destinations:
       r:
+        username: u
+        device: d
 `
 
 	path := writeTempConfig(t, body)
 
 	if _, err := Load(path); err == nil {
 		t.Fatal("expected primary-not-in-destinations error, got nil")
+	}
+}
+
+func TestRejectsTraccarWithoutDeviceID(t *testing.T) {
+	body := `
+destinations:
+  - name: t
+    kind: traccar_osmand
+    url: http://t
+clients:
+  - name: a
+    sources:
+      - {kind: owntracks, path: /x}
+    destinations:
+      t:
+`
+
+	path := writeTempConfig(t, body)
+
+	if _, err := Load(path); err == nil {
+		t.Fatal("expected device_id required error, got nil")
+	}
+}
+
+func TestRejectsOwnTracksRecorderWithoutIdentity(t *testing.T) {
+	body := `
+destinations:
+  - name: r
+    kind: owntracks_recorder
+    url: http://r
+clients:
+  - name: a
+    sources:
+      - {kind: traccar, path: /x}
+    destinations:
+      r:
+`
+
+	path := writeTempConfig(t, body)
+
+	if _, err := Load(path); err == nil {
+		t.Fatal("expected username/device required error, got nil")
 	}
 }
