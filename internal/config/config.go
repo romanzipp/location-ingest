@@ -41,11 +41,22 @@ type Destination struct {
 	Kind string `yaml:"kind"`
 	URL  string `yaml:"url"`
 
+	Username  string     `yaml:"username,omitempty"`
+	Device    string     `yaml:"device,omitempty"`
+	BasicAuth *BasicAuth `yaml:"basic_auth,omitempty"`
+
+	DeviceID string `yaml:"device_id,omitempty"`
+
 	Method string `yaml:"method,omitempty"`
 	Body   string `yaml:"body,omitempty"`
 
 	MinInterval time.Duration `yaml:"min_interval,omitempty"`
 	Timeout     time.Duration `yaml:"timeout,omitempty"`
+}
+
+type BasicAuth struct {
+	User     string `yaml:"user"`
+	Password string `yaml:"password"`
 }
 
 const (
@@ -62,8 +73,10 @@ func Load(path string) (*Config, error) {
 		return nil, fmt.Errorf("read %s: %w", path, err)
 	}
 
+	expanded := os.ExpandEnv(string(data))
+
 	var cfg Config
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
+	if err := yaml.Unmarshal([]byte(expanded), &cfg); err != nil {
 		return nil, fmt.Errorf("parse yaml: %w", err)
 	}
 

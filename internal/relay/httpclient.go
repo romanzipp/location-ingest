@@ -12,19 +12,3 @@ func newHTTPClient(timeout time.Duration) *http.Client {
 
 	return &http.Client{Timeout: timeout}
 }
-
-func mergeQueryAndHeaders(dst *http.Request, srcQuery map[string][]string, srcHeader http.Header) {
-	q := dst.URL.Query()
-	for k, vs := range srcQuery {
-		for _, v := range vs {
-			q.Set(k, v)
-		}
-	}
-	dst.URL.RawQuery = q.Encode()
-
-	for k, vs := range srcHeader {
-		for _, v := range vs {
-			dst.Header.Add(k, v)
-		}
-	}
-}

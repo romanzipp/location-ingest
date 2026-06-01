@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 
 	"codeberg.org/romanzipp/location-ingest/internal/config"
 	"codeberg.org/romanzipp/location-ingest/internal/model"
@@ -15,31 +16,55 @@ type TraccarOsmand struct {
 	name string
 	url  string
 
+	deviceID string
+
 	client *http.Client
 }
 
 func NewTraccarOsmand(d *config.Destination) *TraccarOsmand {
 	return &TraccarOsmand{
-		name:   d.Name,
-		url:    d.URL,
-		client: newHTTPClient(d.Timeout),
+		name:     d.Name,
+		url:      d.URL,
+		deviceID: d.DeviceID,
+		client:   newHTTPClient(d.Timeout),
 	}
 }
 
 func (r *TraccarOsmand) Name() string { return r.name }
 
 func (r *TraccarOsmand) Send(ctx context.Context, raw *pipeline.RawRequest, _ *model.Location) (*pipeline.Response, error) {
+	target, err := url.Parse(r.url)
+	if err != nil {
+		return nil, fmt.Errorf("parse url: %w", err)
+	}
+
+	q := target.Query()
+	for k, vs := range raw.Query {
+		for _, v := range vs {
+			q.Set(k, v)
+		}
+	}
+
+	if r.deviceID != "" {
+		q.Set("id", r.deviceID)
+		q.Del("deviceid")
+	}
+
+	target.RawQuery = q.Encode()
+
 	method := raw.Method
 	if method == "" {
 		method = http.MethodPost
 	}
 
-	req, err := http.NewRequestWithContext(ctx, method, r.url, raw.BodyReader())
+	req, err := http.NewRequestWithContext(ctx, method, target.String(), raw.BodyReader())
 	if err != nil {
 		return nil, fmt.Errorf("build request: %w", err)
 	}
 
-	mergeQueryAndHeaders(req, raw.Query, raw.Header)
+	if ct := raw.Header.Get("Content-Type"); ct != "" {
+		req.Header.Set("Content-Type", ct)
+	}
 
 	resp, err := r.client.Do(req)
 	if err != nil {

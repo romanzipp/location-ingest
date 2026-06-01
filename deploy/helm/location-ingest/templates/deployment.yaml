@@ -35,6 +35,11 @@ spec:
           args:
             - --config
             - /etc/location-ingest/config.yaml
+          {{- with .Values.envFromSecret.name }}
+          envFrom:
+            - secretRef:
+                name: {{ . }}
+          {{- end }}
           ports:
             - name: http
               containerPort: {{ .Values.service.targetPort }}

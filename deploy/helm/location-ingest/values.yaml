@@ -49,6 +49,15 @@ resources:
 #         url: https://recorder.example.com/pub
 config: {}
 
+# Inject env vars from an existing Secret. The config YAML can reference
+# them via `${VAR_NAME}` and they are substituted at load time. Useful for
+# basic_auth passwords or any other credential you don't want in the chart.
+# Example:
+#   envFromSecret:
+#     name: location-ingest-secrets
+envFromSecret:
+  name: ""
+
 probes:
   liveness:
     httpGet:

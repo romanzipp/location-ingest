@@ -24,14 +24,20 @@ clients:
 destinations:
   - name: owntracks-recorder
     kind: owntracks_recorder
-    url: http://127.0.0.1:9001/pub
+    url: https://recorder.example.com/pub
+    username: roman
+    device: phone
+    basic_auth:
+      user: roman
+      password: ${OWNTRACKS_PASSWORD}
 
   - name: traccar-server
     kind: traccar_osmand
-    url: http://127.0.0.1:9001
+    url: https://traccar.example.com
+    device_id: phone-roman
 
   - name: kuma
     kind: heartbeat
     method: GET
-    url: http://127.0.0.1:9001/push?status=up&msg=loc&ping={{.Accuracy}}
+    url: https://uptime.example.com/api/push/XXXX
     min_interval: 60s
