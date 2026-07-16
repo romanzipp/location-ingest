@@ -4,6 +4,9 @@ Deploy a unified location ingesting service that relays location data sent from 
 
 **Mix-and-match any location recording client with any server.**
 
+> [!NOTE]
+> This project is primarily developed on [Codeberg](https://codeberg.org/romanzipp/location-ingest) and only mirrored to GitHub. Please open issues and pull requests on Codeberg.
+
 ## Supported Clients
 
 - [Owntracks](https://owntracks.org/booklet/guide/apps/)
