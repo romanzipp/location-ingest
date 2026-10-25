@@ -64,5 +64,7 @@ jobs:
         env:
           VERSION: ${{ github.ref_name }}
         run: |
+          sed -i "s|^  repository: location-ingest-image|  repository: ghcr.io/romanzipp/location-ingest|" deploy/helm/location-ingest/values.yaml
+          grep -q "^  repository: ghcr.io/romanzipp/location-ingest" deploy/helm/location-ingest/values.yaml
           helm package deploy/helm/location-ingest --version "$VERSION" --app-version "$VERSION" --destination dist/
           helm push "dist/location-ingest-chart-${VERSION}.tgz" oci://ghcr.io/romanzipp

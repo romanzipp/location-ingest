@@ -1,5 +1,5 @@
 image:
-  repository: registry.apex.romanzipp.cloud/location-ingest-image
+  repository: location-ingest-image
   pullPolicy: IfNotPresent
   tag: ""
 
