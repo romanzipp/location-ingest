@@ -26,7 +26,7 @@ variables:
 
 steps:
   - name: test
-    image: golang:1.26-alpine
+    image: golang:1.27-alpine
     <<: *test_resources
     environment:
       CGO_ENABLED: "0"
