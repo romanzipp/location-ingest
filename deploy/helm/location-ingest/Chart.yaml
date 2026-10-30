@@ -1,6 +1,15 @@
 apiVersion: v2
 name: location-ingest-chart
-description: location-ingest relay for OwnTracks and Traccar
+description: Relays location data from tracking apps to multiple servers
 type: application
 version: 0.0.0
 appVersion: "0.0.0"
+home: https://codeberg.org/romanzipp/location-ingest
+sources:
+  - https://codeberg.org/romanzipp/location-ingest
+maintainers:
+  - name: Roman Zipp
+annotations:
+  org.opencontainers.image.vendor: Roman Zipp
+  org.opencontainers.image.licenses: NOASSERTION
+  org.opencontainers.image.documentation: https://codeberg.org/romanzipp/location-ingest

@@ -12,11 +12,19 @@ RUN go mod download
 COPY . .
 
 RUN go build \
-    -ldflags="-s -w -X 'codeberg.org/romanzipp/location-ingest/internal/buildinfo.Version=${VERSION}'" \
-    -o /out/location-ingest ./cmd/location-ingest
+  -ldflags="-s -w -X 'codeberg.org/romanzipp/location-ingest/internal/buildinfo.Version=${VERSION}'" \
+  -o /out/location-ingest ./cmd/location-ingest
 
 
 FROM gcr.io/distroless/static-debian12:nonroot
+LABEL org.opencontainers.image.title="location-ingest" \
+  org.opencontainers.image.description="Relays location data from tracking apps to multiple servers" \
+  org.opencontainers.image.vendor="Roman Zipp" \
+  org.opencontainers.image.authors="Roman Zipp" \
+  org.opencontainers.image.licenses="NOASSERTION" \
+  org.opencontainers.image.url="https://codeberg.org/romanzipp/location-ingest" \
+  org.opencontainers.image.source="https://codeberg.org/romanzipp/location-ingest" \
+  org.opencontainers.image.documentation="https://codeberg.org/romanzipp/location-ingest"
 
 COPY --from=build /out/location-ingest /usr/local/bin/location-ingest
 
